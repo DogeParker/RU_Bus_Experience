@@ -760,6 +760,18 @@ const STAGE3_MAPS = {
         goal:  { x: 470, y: 1310, r: 90 }, // yellow area (fallback circle)
         // orange-brown = building
         isBlocked: (r, g, b) => r > 140 && g < 120 && b < 70 && (r - g) > 60
+    },
+    "CD": {
+        src: 'CookandDoug_topDown.png', w: 1152, h: 1376,
+        start: { x: 937, y: 215 },          // red square on the beige path, top right
+        goal:  { x: 303, y: 1293, r: 70 },  // yellow square on the brown building, bottom left
+        goalColor: false,                   // reach the goal by distance, not by color
+        // trees, lake and buildings block you; roads, grass and paths are walkable
+        isBlocked: (r, g, b) =>
+            (r < 90 && g > 150 && b < 120) ||                       // dark green trees
+            (b > 200 && g > 190 && r < 180) ||                      // light-blue lake
+            (r > 150 && g > 100 && g < 145 && b > 60 && b < 115 &&
+             (r - g) > 40)                                          // brown buildings
     }
 };
 
@@ -828,7 +840,7 @@ function isBlockedAt(x, y) {
 function isInGoal(x, y) {
     const fy = y + 13 * s3U();
     const p = getMapPixel(x, fy);
-    if (p) return p.r > 230 && p.g > 230 && p.b > 120 && p.b < 210; // pale yellow
+    if (p && s3.goalColor !== false) return p.r > 230 && p.g > 230 && p.b > 120 && p.b < 210; // pale yellow
     return Math.hypot(x - s3.goal.x, fy - s3.goal.y) < s3.goal.r;
 }
 
