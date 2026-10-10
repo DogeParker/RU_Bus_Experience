@@ -133,8 +133,8 @@ function startRoute(routeIdx) {
     bus.y = 250;       // Clear space away from the background building doors
     bus.w = 90;        // Smaller, better proportioned size
     bus.h = 170;
-    bus.doorX = bus.x + 45;
-    bus.doorY = bus.y + 90;
+    bus.doorX = bus.x + 25;   // center of the door
+    bus.doorY = bus.y + 135;  // near the bottom of the bus
     
     // Higher crowd density for stage 1
     npcs = [];
@@ -163,13 +163,11 @@ function initStage2() {
     
     // Populate seats & aisle with packed passenger NPCs
     busNpcs = [];
-    const seatRows = 6;
+    const seatRows = 5;
     for (let i = 0; i < seatRows; i++) {
-        busNpcs.push({ x: 90, y: 70 + i * 60, offset: 0, style: getRandomStudentStyle() });
-        busNpcs.push({ x: 710, y: 70 + i * 60, offset: 0, style: getRandomStudentStyle() });
-    }
-    for (let i = 0; i < 8; i++) {
-        busNpcs.push({ x: 260 + (i % 2) * 280, y: 90 + Math.floor(i / 2) * 75, offset: (Math.random() - 0.5) * 15, style: getRandomStudentStyle() });
+        const seatY = 88 + i * 72;   // seat top (60 + i*72) + half height, nudged for sprite origin
+        busNpcs.push({ x: 92,  y: seatY, offset: 0, style: getRandomStudentStyle() });
+        busNpcs.push({ x: 708, y: seatY, offset: 0, style: getRandomStudentStyle() });
     }
 }
 
@@ -432,8 +430,7 @@ function renderStage1() {
     ctx.fillStyle = "#555"; 
     ctx.fillRect(200, 230, 420, 16);
 
-    // Detailed Red & White Pixel Transit Bus (Matching Isometric/2D Sprite Layout)
-    // Smaller, Aligned Transit Bus (Red & White with Natural Glass Door)
+    // Detailed Red Pixel Transit Bus
     const bx = bus.x;
     const by = bus.y;
 
@@ -445,30 +442,21 @@ function renderStage1() {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(bx, by, bus.w, 14);
 
-    // Tinted Windows
-    ctx.fillStyle = "#1e293b";
-    ctx.fillRect(bx + 8, by + 22, 22, 35);
-    ctx.fillRect(bx + 34, by + 22, 22, 35);
-    ctx.fillRect(bx + 60, by + 22, 22, 35);
-
-    // Glass Highlights
-    ctx.fillStyle = "#38bdf8";
-    ctx.fillRect(bx + 10, by + 24, 7, 31);
-    ctx.fillRect(bx + 36, by + 24, 7, 31);
-    ctx.fillRect(bx + 62, by + 24, 7, 31);
-
-    // Natural Sliding Glass Passenger Door (No text sign)
+    // Two stacked windows on the left, above the door
     ctx.fillStyle = "#0f172a";
-    ctx.fillRect(bx + 28, by + 75, 34, 55);
-    ctx.fillStyle = "#0284c7"; // Glass tint
-    ctx.fillRect(bx + 31, by + 78, 13, 49);
-    ctx.fillRect(bx + 46, by + 78, 13, 49);
-    ctx.fillStyle = "#ffffff"; // Center door frame seal
-    ctx.fillRect(bx + 44, by + 78, 2, 49);
+    ctx.fillRect(bx + 8, by + 22, 14, 38);
+    ctx.fillRect(bx + 8, by + 64, 14, 38);
 
-    // Lower White Stripe Accent
+    // Natural Sliding Glass Passenger Door (Bottom-left corner, unified glass panes)
+    // Sliding glass passenger door (bottom-left corner)
+    const doorY = by + bus.h - 61;   // 8px up from the bottom edge
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(bx + 8, doorY, 34, 53);
+    ctx.fillStyle = "#38bdf8";
+    ctx.fillRect(bx + 11, doorY + 3, 13, 47);
+    ctx.fillRect(bx + 26, doorY + 3, 13, 47);
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(bx, by + 145, bus.w, 6);
+    ctx.fillRect(bx + 24, doorY + 3, 2, 47);
 
     // Wheels
     ctx.fillStyle = "#0f172a";
