@@ -67,12 +67,12 @@
 
     <div id="game-container">
         <div id="ui">
-            <div id="route-info">Route: CA ➔ Busch</div>
+            <div id="route-info">Choose A Route</div>
             <div>
                 <span id="bus-capacity-text">Bus: 0/18</span>
                 <div class="capacity-bar-container"><div id="capacity-fill" class="capacity-fill"></div></div>
             </div>
-            <div id="timer" style="color: #ffcc00;">Time Left: 90s</div>
+            <div id="timer" style="color: #ffcc00;">Time Left: --</div>
         </div>
         <canvas id="gameCanvas" width="800" height="500"></canvas>
     </div>
@@ -195,6 +195,7 @@ function resetToMenu() {
     npcs = [];
     busNpcs = [];
     document.getElementById('timer').innerText = `Time Left: --`;
+    document.getElementById('route-info').innerText = `Choose A Route`; // <--- Added this line
     document.getElementById('bus-capacity-text').innerText = `Bus: 0/18`;
     document.getElementById('capacity-fill').style.width = '0%';
 }
