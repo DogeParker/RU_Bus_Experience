@@ -262,8 +262,8 @@ function updateStage1(dt) {
             npc.x += Math.cos(angle) * 1.0;
             npc.y += Math.sin(angle) * 1.0;
             // Resist and push back player movement
-            player.x -= Math.cos(angle) * 1.69;
-            player.y -= Math.sin(angle) * 1.69;
+            player.x -= Math.cos(angle) * 2.69;
+            player.y -= Math.sin(angle) * 2.69;
         }
     });
 
