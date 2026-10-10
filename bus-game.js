@@ -1,13 +1,21 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// Load the Livingston custom background image
+const liviBgImg = new Image();
+liviBgImg.src = 'Livingston_Bus_Stop_2.png'; // Make sure your image file is named this or update the path
+let liviBgLoaded = false;
+liviBgImg.onload = () => {
+    liviBgLoaded = true;
+};
+
 // Game States
 const STATES = { ROUTE_SELECT: 0, STAGE1_STOP: 1, TRANSITION: 2, STAGE2_BUS: 3, WIN: 4, GAME_OVER: 5 };
 let currentState = STATES.ROUTE_SELECT;
 
 // Route Configurations (Livi to Busch corrected to Route B)
 const ROUTES = [
-    { id: "CA", dest: "Busch", name: "CA ➔ Busch (Route B)", time: 85, maxBusCapacity: 18, campus: "College Ave" },
+    { id: "CA", dest: "Busch", name: "CA ➔ Busch (Route A)", time: 85, maxBusCapacity: 18, campus: "College Ave" },
     { id: "Busch", dest: "CD", name: "Busch ➔ CD (Route REXB)", time: 95, maxBusCapacity: 20, campus: "Busch" },
     { id: "CD", dest: "CA", name: "CD ➔ CA (Route EE)", time: 90, maxBusCapacity: 18, campus: "CD" },
     { id: "CD", dest: "Livi", name: "CD ➔ Livi (Route REXL)", time: 95, maxBusCapacity: 20, campus: "CD" },
@@ -129,12 +137,23 @@ function startRoute(routeIdx) {
     
     bus.passengers = Math.floor(route.maxBusCapacity * 0.3);
     bus.maxPassengers = route.maxBusCapacity;
-    bus.x = 480;       // Positioned fully on the sidewalk
-    bus.y = 250;       // Clear space away from the background building doors
-    bus.w = 90;        // Smaller, better proportioned size
-    bus.h = 170;
-    bus.doorX = bus.x + 25;   // center of the door
-    bus.doorY = bus.y + 135;  // near the bottom of the bus
+
+    // Adjust Bus position specifically for Livingston curved road
+    if (route.campus === "Livi") {
+        bus.x = 660; // Moved further onto the gray road
+        bus.y = 200;
+        bus.w = 90;
+        bus.h = 170;
+        bus.doorX = bus.x - 15; // Door faces toward the waiting students
+        bus.doorY = bus.y + 85;
+    } else {
+        bus.x = 480;
+        bus.y = 250;
+        bus.w = 90;
+        bus.h = 170;
+        bus.doorX = bus.x + 45;
+        bus.doorY = bus.y + 90;
+    }
     
     // Higher crowd density for stage 1
     npcs = [];
@@ -354,7 +373,7 @@ function renderRouteSelect() {
     ctx.fillStyle = "#cc0033";
     ctx.font = "bold 28px 'Courier New', Courier, monospace";
     ctx.textAlign = "center";
-    ctx.fillText("THE RU BUS EXPERIENCE GAME", canvas.width / 2, 85);
+    ctx.fillText("THE RU BUS EXPERIENCE", canvas.width / 2, 85);
     
     // Subtitle Instructions (Consistent Courier New)
     ctx.fillStyle = "#fff";
@@ -388,21 +407,25 @@ function renderRouteSelect() {
 function renderStage1() {
     const campus = ROUTES[currentRouteIdx].campus;
 
-    ctx.textAlign = "center";
+    // 1. Render Backgrounds
     if (campus === "College Ave") {
         ctx.fillStyle = "#2b1810"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#8b3a2b"; ctx.fillRect(50, 40, 700, 120); 
         ctx.fillStyle = "#112233"; ctx.fillRect(100, 65, 180, 80);  
         ctx.fillRect(520, 65, 180, 80);
         ctx.fillStyle = "#ffcc00"; ctx.font = "bold 13px 'Courier New'";
+        ctx.textAlign = "center";
         ctx.fillText("COLLEGE AVE STUDENT CENTER", 400, 105);
+        ctx.textAlign = "left";
     } else if (campus === "Busch") {
         ctx.fillStyle = "#182026"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#3a4a5a"; ctx.fillRect(60, 40, 680, 110); 
         ctx.fillStyle = "#222"; ctx.fillRect(100, 60, 150, 70);
         ctx.fillRect(550, 60, 150, 70);
         ctx.fillStyle = "#00ffcc"; ctx.font = "bold 13px 'Courier New'";
+        ctx.textAlign = "center";
         ctx.fillText("BUSCH STUDENT CENTER PLAZA", 400, 100);
+        ctx.textAlign = "left";
     } else if (campus === "CD") {
         ctx.fillStyle = "#142214"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#703020"; ctx.fillRect(60, 40, 680, 100); 
@@ -411,60 +434,68 @@ function renderStage1() {
             ctx.beginPath(); ctx.arc(80 + t * 90, 110, 25, 0, Math.PI*2); ctx.fill();
         }
         ctx.fillStyle = "#aaffaa"; ctx.font = "bold 13px 'Courier New'";
+        ctx.textAlign = "center";
         ctx.fillText("BIEL ROAD BUS STOP (COOK / DOUGLASS)", 400, 95);
+        ctx.textAlign = "left";
     } else {
-        ctx.fillStyle = "#101826"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#2a3b52"; ctx.fillRect(60, 35, 680, 115);
-        ctx.fillStyle = "#4af"; ctx.fillRect(100, 60, 120, 80); 
-        ctx.fillRect(340, 60, 120, 80);
-        ctx.fillRect(580, 60, 120, 80);
-        ctx.fillStyle = "#00ffff"; ctx.font = "bold 13px 'Courier New'";
-        ctx.fillText("LIVINGSTON STUDENT CENTER PLAZA", 400, 95);
+        // --- RENDER ACTUAL LIVINGSTON BACKGROUND IMAGE ---
+        if (liviBgLoaded) {
+            ctx.drawImage(liviBgImg, 0, 0, canvas.width, canvas.height);
+        } else {
+            // Fallback color while image loads
+            ctx.fillStyle = "#f5f2e3";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
     }
-    ctx.textAlign = "left";
 
-    ctx.fillStyle = "#222";
-    ctx.fillRect(0, 200, canvas.width, 300);
-    ctx.fillStyle = "#777"; 
-    ctx.fillRect(200, 230, 420, 240);
-    ctx.fillStyle = "#555"; 
-    ctx.fillRect(200, 230, 420, 16);
+    // 2. Render Default Road/Platform Box ONLY for non-Livingston routes
+    if (campus !== "Livi") {
+        ctx.fillStyle = "#222";
+        ctx.fillRect(0, 200, canvas.width, 300);
+        ctx.fillStyle = "#777"; 
+        ctx.fillRect(200, 230, 420, 240);
+        ctx.fillStyle = "#555"; 
+        ctx.fillRect(200, 230, 420, 16);
+    }
 
-    // Detailed Red Pixel Transit Bus
+    // 3. Render Bus
     const bx = bus.x;
     const by = bus.y;
 
-    // Main Body
     ctx.fillStyle = "#cc0033";
     ctx.fillRect(bx, by, bus.w, bus.h);
 
-    // White Roof Top
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(bx, by, bus.w, 14);
 
-    // Two stacked windows on the left, above the door
-    ctx.fillStyle = "#0f172a";
-    ctx.fillRect(bx + 8, by + 22, 14, 38);
-    ctx.fillRect(bx + 8, by + 64, 14, 38);
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(bx + 8, by + 22, 22, 35);
+    ctx.fillRect(bx + 34, by + 22, 22, 35);
+    ctx.fillRect(bx + 60, by + 22, 22, 35);
 
-    // Natural Sliding Glass Passenger Door (Bottom-left corner, unified glass panes)
-    // Sliding glass passenger door (bottom-left corner)
-    const doorY = by + bus.h - 61;   // 8px up from the bottom edge
-    ctx.fillStyle = "#0f172a";
-    ctx.fillRect(bx + 8, doorY, 34, 53);
     ctx.fillStyle = "#38bdf8";
-    ctx.fillRect(bx + 11, doorY + 3, 13, 47);
-    ctx.fillRect(bx + 26, doorY + 3, 13, 47);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(bx + 24, doorY + 3, 2, 47);
+    ctx.fillRect(bx + 10, by + 24, 7, 31);
+    ctx.fillRect(bx + 36, by + 24, 7, 31);
+    ctx.fillRect(bx + 62, by + 24, 7, 31);
 
-    // Wheels
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(bx + 28, by + 75, 34, 55);
+    ctx.fillStyle = "#0284c7";
+    ctx.fillRect(bx + 31, by + 78, 13, 49);
+    ctx.fillRect(bx + 46, by + 78, 13, 49);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(bx + 44, by + 78, 2, 49);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(bx, by + 145, bus.w, 6);
+
     ctx.fillStyle = "#0f172a";
     ctx.fillRect(bx - 5, by + 30, 6, 20);
     ctx.fillRect(bx - 5, by + 115, 6, 20);
     ctx.fillRect(bx + bus.w - 1, by + 30, 6, 20);
     ctx.fillRect(bx + bus.w - 1, by + 115, 6, 20);
 
+    // 4. Render Students and Player
     npcs.forEach(npc => {
         if (npc.x < -500) return;
         drawPixelStudent(npc.x, npc.y, npc.style, 0.9, npc.stunned > 0);
