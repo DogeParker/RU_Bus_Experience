@@ -30,6 +30,16 @@ CDBgImg.onload = () => {
     CDBgLoaded = true;
 };
 
+// Background music
+const bgMusic = new Audio('intense_action.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0.4;   // 0.0 to 1.0
+
+// Press M to mute / unmute
+window.addEventListener('keydown', e => {
+    if (e.key.toLowerCase() === 'm') bgMusic.muted = !bgMusic.muted;
+});
+
 // Game States
 const STATES = { ROUTE_SELECT: 0, STAGE1_STOP: 1, TRANSITION: 2, STAGE2_BUS: 3,
                      WIN: 4, GAME_OVER: 5, STAGE3_WALK: 6 };
@@ -143,11 +153,15 @@ function resetToMenu() {
     document.getElementById('timer').innerText = `Time Left: --`;
     document.getElementById('route-info').innerText = `Choose A Route`;
     walker.x = CA_START.x; walker.y = CA_START.y;
+    bgMusic.pause();
 }
 
 function startRoute(routeIdx) {
     currentRouteIdx = routeIdx;
     const route = ROUTES[routeIdx];
+    bgMusic.currentTime = 0;
+    bgMusic.playbackRate = route.name.includes("LX") ? 1.3 : 1.0;
+    bgMusic.play().catch(err => console.warn('Music blocked:', err));
     timeLeft = route.time;
     currentState = STATES.STAGE1_STOP;
     
