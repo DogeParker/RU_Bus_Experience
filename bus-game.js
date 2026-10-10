@@ -47,10 +47,10 @@ let currentState = STATES.ROUTE_SELECT;
 
 // Route Configurations (Livi to Busch corrected to Route B)
 const ROUTES = [
-    { id: "Busch", dest: "CD", name: "Busch ➔ CD (Route REXB)", time: 40, maxBusCapacity: 20, campus: "Busch" },
-    { id: "CD", dest: "Livi", name: "CD ➔ Livi (Route REXL)", time: 37, maxBusCapacity: 20, campus: "CD" },
-    { id: "CD", dest: "CA", name: "CD ➔ CA (Route EE)", time: 34, maxBusCapacity: 20, campus: "CD" },
-    {id: "CA", dest: "Busch", name: "CA ➔ Busch (Route A)", time: 32, maxBusCapacity: 20, campus: "College Ave" },
+    { id: "Busch", dest: "CD", name: "Busch ➔ CD (Route REXB)", time: 40, maxBusCapacity: 55, campus: "Busch" },
+    { id: "CD", dest: "Livi", name: "CD ➔ Livi (Route REXL)", time: 37, maxBusCapacity: 45, campus: "CD" },
+    { id: "CD", dest: "CA", name: "CD ➔ CA (Route EE)", time: 34, maxBusCapacity: 35, campus: "CD" },
+    {id: "CA", dest: "Busch", name: "CA ➔ Busch (Route A)", time: 32, maxBusCapacity: 35, campus: "College Ave" },
     { id: "Livi", dest: "Busch", name: "Livi ➔ Busch (Route B)", time: 29, maxBusCapacity: 20, campus: "Livi" },
     { id: "CA", dest: "Livi", name: "CA ➔ Livi (Route LX)", time: 27, maxBusCapacity: 20, campus: "College Ave" }
 ];
@@ -175,20 +175,17 @@ function startRoute(routeIdx) {
 
     // Adjust Bus position specifically for Livingston curved road
     if (route.campus === "Livi" || route.campus === "College Ave") {
-        bus.x = 660; // Moved further onto the gray road
+        bus.x = 660;
         bus.y = 200;
-        bus.w = 90;
-        bus.h = 170;
-        bus.doorX = bus.x - 15; // Door faces toward the waiting students
-        bus.doorY = bus.y + 85;
     } else {
         bus.x = 480;
         bus.y = 250;
-        bus.w = 90;
-        bus.h = 170;
-        bus.doorX = bus.x + 45;
-        bus.doorY = bus.y + 90;
     }
+    bus.w = 90;
+    bus.h = 170;
+    // Same door spot for every campus: just outside the left edge, level with the drawn door
+    bus.doorX = bus.x - 15;
+    bus.doorY = bus.y + 102;
     
     // Higher crowd density for stage 1
         // Bigger crowd for stage 1 (all campuses)
