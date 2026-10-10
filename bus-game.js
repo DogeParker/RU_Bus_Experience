@@ -8,6 +8,13 @@ let liviBgLoaded = false;
 liviBgImg.onload = () => {
     liviBgLoaded = true;
 };
+// Load the College Ave custom background image
+const cayaBgImg = new Image();
+cayaBgImg.src = 'College_Ave_Bus_Stop_2.png'; // Make sure your image file is named this or update the path
+let cayaBgLoaded = false;
+cayaBgImg.onload = () => {
+    cayaBgLoaded = true;
+};
 
 // Game States
 const STATES = { ROUTE_SELECT: 0, STAGE1_STOP: 1, TRANSITION: 2, STAGE2_BUS: 3, WIN: 4, GAME_OVER: 5 };
@@ -139,7 +146,7 @@ function startRoute(routeIdx) {
     bus.maxPassengers = route.maxBusCapacity;
 
     // Adjust Bus position specifically for Livingston curved road
-    if (route.campus === "Livi") {
+    if (route.campus === "Livi" || route.campus === "College Ave") {
         bus.x = 660; // Moved further onto the gray road
         bus.y = 200;
         bus.w = 90;
@@ -409,14 +416,12 @@ function renderStage1() {
 
     // 1. Render Backgrounds
     if (campus === "College Ave") {
-        ctx.fillStyle = "#2b1810"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#8b3a2b"; ctx.fillRect(50, 40, 700, 120); 
-        ctx.fillStyle = "#112233"; ctx.fillRect(100, 65, 180, 80);  
-        ctx.fillRect(520, 65, 180, 80);
-        ctx.fillStyle = "#ffcc00"; ctx.font = "bold 13px 'Courier New'";
-        ctx.textAlign = "center";
-        ctx.fillText("COLLEGE AVE STUDENT CENTER", 400, 105);
-        ctx.textAlign = "left";
+        if (cayaBgLoaded) {
+            ctx.drawImage(cayaBgImg, 0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = "#f5f2e3";   // fallback while the image loads
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
     } else if (campus === "Busch") {
         ctx.fillStyle = "#182026"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#3a4a5a"; ctx.fillRect(60, 40, 680, 110); 
@@ -449,7 +454,7 @@ function renderStage1() {
     }
 
     // 2. Render Default Road/Platform Box ONLY for non-Livingston routes
-    if (campus !== "Livi") {
+    if (campus !== "Livi" && campus !== "College Ave") {
         ctx.fillStyle = "#222";
         ctx.fillRect(0, 200, canvas.width, 300);
         ctx.fillStyle = "#777"; 
