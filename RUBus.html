@@ -365,18 +365,10 @@ function updateStage2(dt) {
     }
     
     // Easier balancing: gentle damping and collision shove resistance
-    busForce *= 0.92; 
-    busBalance += busForce;
+    busForce *= .75; 
+    busForce += 0.01*busBalance;
 
-    // NPC Collision effect inside the bus
-    busNpcs.forEach(npc => {
-        let targetX = npc.x + npc.offset;
-        let playerX = 400 + busBalance * 1.8;
-        if (Math.abs(targetX - playerX) < 22) {
-            // Push player slightly based on crowd pressure
-            busForce += (targetX > playerX ? -0.35 : 0.35);
-        }
-    });
+    busBalance += busForce;
 
     if (keys['a'] || keys['arrowleft']) busBalance -= 1.6;
     if (keys['d'] || keys['arrowright']) busBalance += 1.6;
