@@ -383,7 +383,7 @@ function updateStage2(dt) {
     }
 
     if (stage2Progress >= 100) {
-        if (STAGE3_MAPS[ROUTES[currentRouteIdx].campus]) initStage3();
+        if (getStage3Map(ROUTES[currentRouteIdx])) initStage3();
         else currentState = STATES.WIN;
     }
 }
@@ -772,8 +772,26 @@ const STAGE3_MAPS = {
             (b > 200 && g > 190 && r < 180) ||                      // light-blue lake
             (r > 150 && g > 100 && g < 145 && b > 60 && b < 115 &&
              (r - g) > 40)                                          // brown buildings
+    },
+    "Busch": {
+        src: 'Busch Student Center Bus Stop.png', w: 974, h: 769,
+        start: { x: 610, y: 690 },          // plaza, near the crosswalk
+        goal:  { x: 215, y: 450, r: 45 },   // the red door on the maroon building
+        goalColor: false,                   // reach the goal by distance, not by color
+        // trees and buildings block you; plaza, road and crosswalk are walkable
+        isBlocked: (r, g, b) =>
+            (r < 90 && g > 110 && b < 90) ||                         // green trees
+            (r > 110 && r < 170 && g < 40 && b < 60) ||              // maroon building
+            (r > 165 && r < 205 && g > 105 && g < 150 && b > 65 && b < 110) // brown building
     }
 };
+
+// Route dest codes -> STAGE3_MAPS keys
+const DEST_TO_MAP = { CA: "College Ave", Livi: "Livi", CD: "CD", Busch: "Busch" };
+
+function getStage3Map(route) {
+    return STAGE3_MAPS[DEST_TO_MAP[route.dest]];
+}
 
 for (const m of Object.values(STAGE3_MAPS)) {
     m.img = new Image();
@@ -806,7 +824,7 @@ const s3H = () => s3.loaded ? s3.img.naturalHeight : s3.h;
 const s3U = () => s3H() / 886;       // size factor so big maps keep the same feel
 
 function initStage3() {
-    s3 = STAGE3_MAPS[ROUTES[currentRouteIdx].campus];
+    s3 = getStage3Map(ROUTES[currentRouteIdx]);
     currentState = STATES.STAGE3_WALK;
     walker.x = s3.start.x;
     walker.y = s3.start.y;
