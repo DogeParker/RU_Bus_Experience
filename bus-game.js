@@ -111,7 +111,7 @@ function resetToMenu() {
     npcs = [];
     busNpcs = [];
     document.getElementById('timer').innerText = `Time Left: --`;
-    document.getElementById('route-info').innerText = `Choose A Route`; // <--- Added this line
+    document.getElementById('route-info').innerText = `Choose A Route`;
     document.getElementById('bus-capacity-text').innerText = `Bus: 0/18`;
     document.getElementById('capacity-fill').style.width = '0%';
 }
@@ -254,11 +254,16 @@ function updateStage1(dt) {
             }
         }
 
+        // Movable NPCs with crowd resistance (reduces/pushes back player movement on contact)
         let pdist = Math.hypot(npc.x - player.x, npc.y - player.y);
-        if (pdist < 26) {
+        if (pdist < 28) {
             let angle = Math.atan2(npc.y - player.y, npc.x - player.x);
-            npc.x += Math.cos(angle) * 1.2;
-            npc.y += Math.sin(angle) * 1.2;
+            // Push NPC away so they are not immovable
+            npc.x += Math.cos(angle) * 1.0;
+            npc.y += Math.sin(angle) * 1.0;
+            // Resist and push back player movement
+            player.x -= Math.cos(angle) * 1.69;
+            player.y -= Math.sin(angle) * 1.69;
         }
     });
 
@@ -283,7 +288,7 @@ function updateStage2(dt) {
     
     // Easier balancing: gentle damping and collision shove resistance
     busForce *= .75; 
-    busForce += 0.01*busBalance;
+    busForce += 0.01 * busBalance;
 
     busBalance += busForce;
 
@@ -332,7 +337,6 @@ function renderRouteSelect() {
     ctx.fillStyle = "#161616";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Moved down and centered nicely
     ctx.fillStyle = "#cc0033";
     ctx.font = "bold 28px Courier New";
     ctx.textAlign = "center";
@@ -357,9 +361,9 @@ function renderRouteSelect() {
         
         ctx.fillStyle = "#ffcc00";
         ctx.font = "12px Courier New";
-        ctx.textAlign = "right"; // Align text from the right side
-        ctx.fillText(`Campus: ${route.campus}`, 600, startY + i * 50 + 25); // X changed to 600
-        ctx.textAlign = "left";  // Reset back to left for other text
+        ctx.textAlign = "right"; 
+        ctx.fillText(`Campus: ${route.campus}`, 600, startY + i * 50 + 25); 
+        ctx.textAlign = "left";  
     });
 }
 
@@ -496,7 +500,6 @@ function renderStage2() {
     ctx.font = "10px Courier New";
     ctx.fillText("DRIVER", 380, 62);
 
-    // Render seated & standing passengers properly on seats/aisles
     busNpcs.forEach(npc => {
         drawPixelStudent(npc.x + npc.offset, npc.y, npc.style, 0.85);
     });
