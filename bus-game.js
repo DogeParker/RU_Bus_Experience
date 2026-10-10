@@ -37,12 +37,12 @@ let currentState = STATES.ROUTE_SELECT;
 
 // Route Configurations (Livi to Busch corrected to Route B)
 const ROUTES = [
-    { id: "CA", dest: "Busch", name: "CA ➔ Busch (Route A)", time: 85, maxBusCapacity: 18, campus: "College Ave" },
-    { id: "Busch", dest: "CD", name: "Busch ➔ CD (Route REXB)", time: 95, maxBusCapacity: 20, campus: "Busch" },
-    { id: "CD", dest: "CA", name: "CD ➔ CA (Route EE)", time: 90, maxBusCapacity: 18, campus: "CD" },
-    { id: "CD", dest: "Livi", name: "CD ➔ Livi (Route REXL)", time: 95, maxBusCapacity: 20, campus: "CD" },
-    { id: "Livi", dest: "Busch", name: "Livi ➔ Busch (Route B)", time: 80, maxBusCapacity: 16, campus: "Livi" },
-    { id: "CA", dest: "Livi", name: "CA ➔ Livi (Route LX)", time: 85, maxBusCapacity: 22, campus: "College Ave" }
+    { id: "Busch", dest: "CD", name: "Busch ➔ CD (Route REXB)", time: 40, maxBusCapacity: 20, campus: "Busch" },
+    { id: "CD", dest: "Livi", name: "CD ➔ Livi (Route REXL)", time: 37, maxBusCapacity: 20, campus: "CD" },
+    { id: "CD", dest: "CA", name: "CD ➔ CA (Route EE)", time: 34, maxBusCapacity: 20, campus: "CD" },
+    {id: "CA", dest: "Busch", name: "CA ➔ Busch (Route A)", time: 32, maxBusCapacity: 20, campus: "College Ave" },
+    { id: "Livi", dest: "Busch", name: "Livi ➔ Busch (Route B)", time: 29, maxBusCapacity: 20, campus: "Livi" },
+    { id: "CA", dest: "Livi", name: "CA ➔ Livi (Route LX)", time: 27, maxBusCapacity: 20, campus: "College Ave" }
 ];
 let currentRouteIdx = 0;
 
@@ -142,8 +142,6 @@ function resetToMenu() {
     busNpcs = [];
     document.getElementById('timer').innerText = `Time Left: --`;
     document.getElementById('route-info').innerText = `Choose A Route`;
-    document.getElementById('bus-capacity-text').innerText = `Bus: 0/18`;
-    document.getElementById('capacity-fill').style.width = '0%';
     walker.x = CA_START.x; walker.y = CA_START.y;
 }
 
@@ -403,8 +401,8 @@ function render() {
         }
     } else {
         // Reset visibility on menu / end screens
-        document.getElementById('bus-capacity-text').style.display = 'inline';
-        document.querySelector('.capacity-bar-container').style.display = 'inline-block';
+        document.getElementById('bus-capacity-text').style.display = 'none';
+        document.querySelector('.capacity-bar-container').style.display = 'none';
     }
 
     if (currentState === STATES.ROUTE_SELECT) {
@@ -423,6 +421,48 @@ function render() {
     } else if (currentState === STATES.STAGE3_WALK) {
         renderStage3();
       }
+}
+
+function drawFace(cx, cy, r, color, happy) {
+    // Head
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Eyes
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.35, cy - r * 0.2, r * 0.12, 0, Math.PI * 2);
+    ctx.arc(cx + r * 0.35, cy - r * 0.2, r * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+
+    if (happy) {
+        // Smile
+        ctx.beginPath();
+        ctx.arc(cx, cy + r * 0.05, r * 0.5, 0.15 * Math.PI, 0.85 * Math.PI);
+        ctx.stroke();
+    } else {
+        // Angry eyebrows (slanted down toward the middle)
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.6, cy - r * 0.55);
+        ctx.lineTo(cx - r * 0.15, cy - r * 0.35);
+        ctx.moveTo(cx + r * 0.6, cy - r * 0.55);
+        ctx.lineTo(cx + r * 0.15, cy - r * 0.35);
+        ctx.stroke();
+
+        // Frown
+        ctx.beginPath();
+        ctx.arc(cx, cy + r * 0.65, r * 0.4, 1.15 * Math.PI, 1.85 * Math.PI);
+        ctx.stroke();
+    }
 }
 
 function renderRouteSelect() {
@@ -449,6 +489,15 @@ function renderRouteSelect() {
         ctx.strokeStyle = "#cc0033";
         ctx.lineWidth = 2;
         ctx.strokeRect(180, startY + i * 50, 440, 40);
+
+        // Face icons to the left of specific routes
+        const faceX = 150;
+        const faceY = startY + i * 50 + 20;
+        if (route.name.includes("REXB")) {
+            drawFace(faceX, faceY, 16, "#00ff44", true);    // bright green happy face
+        } else if (route.name.includes("LX")) {
+            drawFace(faceX, faceY, 16, "#8b0000", false);   // dark red angry face
+        }
 
         // Route Name Label
         ctx.fillStyle = "#fff";
