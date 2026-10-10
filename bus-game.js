@@ -357,7 +357,9 @@ function renderRouteSelect() {
         
         ctx.fillStyle = "#ffcc00";
         ctx.font = "12px Courier New";
-        ctx.fillText(`Campus: ${route.campus}`, 480, startY + i * 50 + 25);
+        ctx.textAlign = "right"; // Align text from the right side
+        ctx.fillText(`Campus: ${route.campus}`, 600, startY + i * 50 + 25); // X changed to 600
+        ctx.textAlign = "left";  // Reset back to left for other text
     });
 }
 
