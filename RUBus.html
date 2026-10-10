@@ -33,15 +33,33 @@
             right: 10px;
             display: flex;
             justify-content: space-between;
-            font-size: 18px;
+            align-items: center;
+            font-size: 15px;
             font-weight: bold;
             text-shadow: 2px 2px #000;
             pointer-events: none;
+        }
+        .capacity-bar-container {
+            width: 130px;
+            height: 14px;
+            background: #333;
+            border: 2px solid #fff;
+            display: inline-block;
+            position: relative;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+        .capacity-fill {
+            height: 100%;
+            background: #cc0033;
+            width: 0%;
+            transition: width 0.1s;
         }
         #controls-hint {
             margin-top: 10px;
             color: #aaa;
             font-size: 14px;
+            text-align: center;
         }
     </style>
 </head>
@@ -50,14 +68,17 @@
     <div id="game-container">
         <div id="ui">
             <div id="route-info">Route: CA ➔ Busch</div>
-            <div id="bus-capacity">Bus Capacity: 0/15</div>
-            <div id="timer">Time Left: 60s</div>
+            <div>
+                <span id="bus-capacity-text">Bus: 0/15</span>
+                <div class="capacity-bar-container"><div id="capacity-fill" class="capacity-fill"></div></div>
+            </div>
+            <div id="timer" style="color: #ffcc00;">Time Left: 90s</div>
         </div>
         <canvas id="gameCanvas" width="800" height="500"></canvas>
     </div>
 
     <div id="controls-hint">
-        <strong>Controls:</strong> Stage 1: [WASD] Move | [Q] Punch/Push | Stage 2: [A/D] Balance Against Brakes
+        <strong>Controls:</strong> Stage 1: [WASD] Move | [Q] Punch/Push Students | Stage 2: [A/D] Balance Against Bus Brakes
     </div>
 
 <script>
@@ -70,16 +91,16 @@ let currentState = STATES.ROUTE_SELECT;
 
 // Route Configurations
 const ROUTES = [
-    { name: "CA ➔ Busch (Route B)", time: 45, maxBusCapacity: 12, busSpeed: 1.2 },
-    { name: "Busch ➔ CD (Route REXB)", time: 60, maxBusCapacity: 15, busSpeed: 1.5 },
-    { name: "CD ➔ CA (Route EE)", time: 50, maxBusCapacity: 14, busSpeed: 1.3 },
-    { name: "CD ➔ Livi (Route REXL)", time: 55, maxBusCapacity: 15, busSpeed: 1.4 },
-    { name: "Busch ➔ Livi (Route C)", time: 40, maxBusCapacity: 10, busSpeed: 1.1 },
-    { name: "CA ➔ Livi (Route LX)", time: 45, maxBusCapacity: 16, busSpeed: 1.6 }
+    { id: "CA", dest: "Busch", name: "CA ➔ Busch (Route B)", time: 85, maxBusCapacity: 14, campus: "College Ave" },
+    { id: "Busch", dest: "CD", name: "Busch ➔ CD (Route REXB)", time: 95, maxBusCapacity: 16, campus: "Busch" },
+    { id: "CD", dest: "CA", name: "CD ➔ CA (Route EE)", time: 90, maxBusCapacity: 15, campus: "CD" },
+    { id: "CD", dest: "Livi", name: "CD ➔ Livi (Route REXL)", time: 95, maxBusCapacity: 16, campus: "CD" },
+    { id: "Busch", dest: "Livi", name: "Busch ➔ Livi (Route C)", time: 80, maxBusCapacity: 12, campus: "Busch" },
+    { id: "CA", dest: "Livi", name: "CA ➔ Livi (Route LX)", time: 85, maxBusCapacity: 18, campus: "College Ave" }
 ];
 let currentRouteIdx = 0;
 
-// Timer Variables
+// Timer & Game UI Variables
 let timeLeft = 0;
 let lastTime = 0;
 
@@ -89,35 +110,49 @@ studentSprite.src = 'student_sprite.png';
 let spriteLoaded = false;
 studentSprite.onload = () => { spriteLoaded = true; };
 
-// Inputs
+// Inputs tracking
 const keys = {};
 window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
-// Mouse Input for Route Selection
+// Mouse Input for Route Selection and Game Resets
 canvas.addEventListener('click', (e) => {
     if (currentState === STATES.ROUTE_SELECT) {
         const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
         const clickY = e.clientY - rect.top;
-        const startY = 150;
+        const startY = 135;
         for (let i = 0; i < ROUTES.length; i++) {
-            if (clickY >= startY + i * 45 && clickY <= startY + i * 45 + 35) {
+            if (clickX >= 180 && clickX <= 620 && clickY >= startY + i * 50 && clickY <= startY + i * 50 + 40) {
                 startRoute(i);
                 break;
             }
         }
     } else if (currentState === STATES.WIN || currentState === STATES.GAME_OVER) {
-        currentState = STATES.ROUTE_SELECT;
+        resetToMenu();
     }
 });
 
 // Game Entities
-let player = { x: 100, y: 350, vx: 0, vy: 0, speed: 3.5, size: 24, isPunching: false, punchTimer: 0 };
-let bus = { x: 450, y: 150, w: 120, h: 240, passengers: 0, maxPassengers: 15, doorX: 510, doorY: 320 };
+let player = { x: 380, y: 330, vx: 0, vy: 0, speed: 2.8, size: 24, isPunching: false, punchTimer: 0 };
+let bus = { x: 460, y: 150, w: 120, h: 240, passengers: 0, maxPassengers: 15, doorX: 520, doorY: 320 };
 let npcs = [];
-let busBalance = 0; // -100 to 100 (Stage 2)
+let busBalance = 0; // -100 to 100 (Stage 2 balancing)
 let busForce = 0;
 let stage2Progress = 0;
+
+function resetToMenu() {
+    currentState = STATES.ROUTE_SELECT;
+    timeLeft = 0;
+    bus.passengers = 0;
+    stage2Progress = 0;
+    busBalance = 0;
+    npcs = [];
+    // Reset UI overlay elements neatly
+    document.getElementById('timer').innerText = `Time Left: --`;
+    document.getElementById('bus-capacity-text').innerText = `Bus: 0/15`;
+    document.getElementById('capacity-fill').style.width = '0%';
+}
 
 function startRoute(routeIdx) {
     currentRouteIdx = routeIdx;
@@ -125,28 +160,30 @@ function startRoute(routeIdx) {
     timeLeft = route.time;
     currentState = STATES.STAGE1_STOP;
     
-    // Player reset closer to the bus on the sidewalk
-    player.x = 400;
+    // Player spawn near sidewalk queue
+    player.x = 380;
     player.y = 330;
+    player.vx = 0;
+    player.vy = 0;
     
-    // Bus setup
-    bus.passengers = Math.floor(route.maxBusCapacity * 0.4); 
+    // Bus configuration
+    bus.passengers = Math.floor(route.maxBusCapacity * 0.3); // Starts partially filled
     bus.maxPassengers = route.maxBusCapacity;
-    bus.x = 450;
+    bus.x = 460;
     bus.y = 150;
     bus.w = 120;
     bus.h = 240;
-    bus.doorX = 510;
+    bus.doorX = 520;
     bus.doorY = 320;
     
-    // Spawn Crowd NPCs in the same sidewalk area for equal starting chance
+    // Spawn Crowd NPCs on the sidewalk queue
     npcs = [];
-    for (let i = 0; i < 22; i++) {
+    for (let i = 0; i < 20; i++) {
         npcs.push({
-            x: 370 + Math.random() * 120,
-            y: 280 + Math.random() * 100,
-            vx: (Math.random() - 0.5) * 1,
-            vy: (Math.random() - 0.5) * 1,
+            x: 320 + Math.random() * 160,
+            y: 260 + Math.random() * 130,
+            vx: (Math.random() - 0.5) * 0.6,
+            vy: (Math.random() - 0.5) * 0.6,
             size: 22,
             stunned: 0
         });
@@ -162,7 +199,7 @@ function startRoute(routeIdx) {
 function update(dt) {
     if (currentState !== STATES.STAGE1_STOP && currentState !== STATES.STAGE2_BUS) return;
 
-    // Timer Update
+    // Timer Countdown
     timeLeft -= dt;
     if (timeLeft <= 0) {
         timeLeft = 0;
@@ -178,7 +215,7 @@ function update(dt) {
 }
 
 function updateStage1(dt) {
-    // Player Movement (WASD)
+    // Smooth Player Movement (WASD)
     player.vx = 0;
     player.vy = 0;
     if (keys['w'] || keys['W']) player.vy = -player.speed;
@@ -189,82 +226,102 @@ function updateStage1(dt) {
     player.x += player.vx;
     player.y += player.vy;
 
-    // Keep player in bounds
-    player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
-    player.y = Math.max(150, Math.min(canvas.height - 20, player.y));
+    // Boundary constraints on sidewalk
+    player.x = Math.max(220, Math.min(canvas.width - 120, player.x));
+    player.y = Math.max(180, Math.min(canvas.height - 50, player.y));
 
-    // Punching / Pushing Mechanic (Q)
+    // High Difficulty Punch / Push Mechanic (Q)
     if ((keys['q'] || keys['Q']) && player.punchTimer <= 0) {
         player.isPunching = true;
-        player.punchTimer = 15; // Cooldown frames
+        player.punchTimer = 30; // Longer cooldown
+        
+        // Much harder to push: lower push velocity impulse and shorter stun
+        npcs.forEach(npc => {
+            let pdx = npc.x - player.x;
+            let pdy = npc.y - player.y;
+            let pdist = Math.hypot(pdx, pdy);
+            if (pdist < 50) { // Shorter effective range
+                let pushAngle = Math.atan2(pdy, pdx);
+                npc.vx = Math.cos(pushAngle) * 2.2; // Weak push force
+                npc.vy = Math.sin(pushAngle) * 2.2;
+                npc.stunned = 18; // Very brief stun, they recover quickly
+            }
+        });
     }
     if (player.punchTimer > 0) {
         player.punchTimer--;
-        if (player.punchTimer < 10) player.isPunching = false;
+        if (player.punchTimer < 22) player.isPunching = false;
     }
 
-    // NPC Logic
+    // NPC Crowd Logic
     npcs.forEach(npc => {
         if (npc.stunned > 0) {
             npc.stunned--;
+            npc.x += npc.vx;
+            npc.y += npc.vy;
+            npc.vx *= 0.75;
+            npc.vy *= 0.75;
             return;
         }
 
+        // Natural aggressive movement towards the bus door
         let dx = bus.doorX - npc.x;
         let dy = bus.doorY - npc.y;
         let dist = Math.hypot(dx, dy);
 
-        if (dist > 10) {
-            npc.x += (dx / dist) * 0.8;
-            npc.y += (dy / dist) * 0.8;
+        if (dist > 14) {
+            npc.x += (dx / dist) * 0.65; // NPCs push forward persistently
+            npc.y += (dy / dist) * 0.65;
         } else {
+            // NPC boards bus if space is available
             if (bus.passengers < bus.maxPassengers) {
                 bus.passengers++;
-                npc.x = -1000; 
+                npc.x = -9999; 
             }
         }
 
-        // Punch collision check
-        if (player.isPunching) {
-            let pdx = npc.x - player.x;
-            let pdy = npc.y - player.y;
-            let pdist = Math.hypot(pdx, pdy);
-            if (pdist < 50) {
-                npc.x += (pdx / pdist) * 40;
-                npc.y += (pdy / pdist) * 40;
-                npc.stunned = 30;
-            }
+        // Player body collision pushing NPCs softly
+        let pdist = Math.hypot(npc.x - player.x, npc.y - player.y);
+        if (pdist < 26) {
+            let angle = Math.atan2(npc.y - player.y, npc.x - player.x);
+            npc.x += Math.cos(angle) * 1.2;
+            npc.y += Math.sin(angle) * 1.2;
         }
     });
 
+    // Fail condition if bus fills up completely before you can board
     if (bus.passengers >= bus.maxPassengers) {
         currentState = STATES.GAME_OVER;
     }
 
-    // Player Boarding Check
+    // Player Boarding Check at the Door
     let doorDist = Math.hypot(bus.doorX - player.x, bus.doorY - player.y);
-    if (doorDist < 30) {
+    if (doorDist < 28 && bus.passengers < bus.maxPassengers) {
         currentState = STATES.STAGE2_BUS; 
     }
 }
 
 function updateStage2(dt) {
-    stage2Progress += dt * 10;
+    stage2Progress += dt * 6.5; 
 
-    if (Math.random() < 0.03) {
-        busForce += (Math.random() - 0.5) * 8; 
+    // Driver erratic sudden braking & acceleration shocks
+    if (Math.random() < 0.025) {
+        busForce += (Math.random() - 0.5) * 6.5; 
     }
     
-    busForce *= 0.95;
+    busForce *= 0.94; 
     busBalance += busForce;
 
-    if (keys['a'] || keys['ArrowLeft']) busBalance -= 1.5;
-    if (keys['d'] || keys['ArrowRight']) busBalance += 1.5;
+    // Player balancing inputs (A/D or Arrow keys)
+    if (keys['a'] || keys['arrowleft']) busBalance -= 1.4;
+    if (keys['d'] || keys['arrowright']) busBalance += 1.4;
 
+    // Fail if balance goes completely out of bounds
     if (Math.abs(busBalance) > 100) {
         currentState = STATES.GAME_OVER;
     }
 
+    // Win condition when trip progress reaches 100%
     if (stage2Progress >= 100) {
         currentState = STATES.WIN;
     }
@@ -273,9 +330,16 @@ function updateStage2(dt) {
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    document.getElementById('timer').innerText = `Time Left: ${Math.ceil(timeLeft)}s`;
-    document.getElementById('route-info').innerText = `Route: ${ROUTES[currentRouteIdx].name}`;
-    document.getElementById('bus-capacity').innerText = `Bus Capacity: ${bus.passengers}/${bus.maxPassengers}`;
+    // Update Top UI Display Elements
+    if (currentState !== STATES.ROUTE_SELECT && currentState !== STATES.WIN && currentState !== STATES.GAME_OVER) {
+        const route = ROUTES[currentRouteIdx];
+        document.getElementById('timer').innerText = `Time Left: ${Math.ceil(timeLeft)}s`;
+        document.getElementById('route-info').innerText = `Route: ${route.name}`;
+        document.getElementById('bus-capacity-text').innerText = `Bus: ${bus.passengers}/${bus.maxPassengers}`;
+        const fillPercent = (bus.passengers / bus.maxPassengers) * 100;
+        document.getElementById('capacity-fill').style.width = fillPercent + '%';
+        document.getElementById('capacity-fill').style.background = fillPercent >= 100 ? '#ff3333' : '#cc0033';
+    }
 
     if (currentState === STATES.ROUTE_SELECT) {
         renderRouteSelect();
@@ -291,37 +355,79 @@ function render() {
 }
 
 function renderRouteSelect() {
+    ctx.fillStyle = "#161616";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.fillStyle = "#cc0033";
-    ctx.font = "28px Courier New";
-    ctx.fillText("THE RU BUS EXPERIENCE GAME", 180, 70);
+    ctx.font = "bold 26px Courier New";
+    ctx.fillText("THE RU BUS EXPERIENCE GAME", 170, 55);
     
     ctx.fillStyle = "#fff";
-    ctx.font = "18px Courier New";
-    ctx.fillText("Select a Route to Get to Class On Time:", 200, 110);
+    ctx.font = "16px Courier New";
+    ctx.fillText("Select your campus route to get to class on time:", 170, 95);
 
-    const startY = 150;
+    const startY = 135;
     ROUTES.forEach((route, i) => {
-        ctx.fillStyle = "#333";
-        ctx.fillRect(200, startY + i * 45, 400, 35);
+        ctx.fillStyle = "#262626";
+        ctx.fillRect(180, startY + i * 50, 440, 40);
         ctx.strokeStyle = "#cc0033";
-        ctx.strokeRect(200, startY + i * 45, 400, 35);
+        ctx.lineWidth = 2;
+        ctx.strokeRect(180, startY + i * 50, 440, 40);
 
         ctx.fillStyle = "#fff";
-        ctx.font = "16px Courier New";
-        ctx.fillText(route.name, 220, startY + i * 45 + 23);
+        ctx.font = "bold 15px Courier New";
+        ctx.fillText(route.name, 200, startY + i * 50 + 25);
+        
+        ctx.fillStyle = "#ffcc00";
+        ctx.font = "12px Courier New";
+        ctx.fillText(`Campus: ${route.campus}`, 480, startY + i * 50 + 25);
     });
 }
 
 function renderStage1() {
-    // Street Background
-    ctx.fillStyle = "#2a2a2a";
-    ctx.fillRect(0, 120, canvas.width, canvas.height - 120);
+    const campus = ROUTES[currentRouteIdx].campus;
 
-    // Sidewalk
-    ctx.fillStyle = "#777";
-    ctx.fillRect(250, 250, 350, 200);
-    ctx.fillStyle = "#666";
-    ctx.fillRect(250, 250, 350, 15);
+    // --- CUSTOM PIXELATED CAMPUS BACKGROUNDS ---
+    if (campus === "College Ave") {
+        ctx.fillStyle = "#2b1810"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#8b3a2b"; ctx.fillRect(50, 40, 700, 120); 
+        ctx.fillStyle = "#112233"; ctx.fillRect(150, 70, 180, 90);  
+        ctx.fillRect(450, 70, 180, 90);
+        ctx.fillStyle = "#ffcc00"; ctx.font = "12px Courier New";
+        ctx.fillText("COLLEGE AVE STUDENT CENTER BUS STOP", 230, 30);
+    } else if (campus === "Busch") {
+        ctx.fillStyle = "#182026"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#3a4a5a"; ctx.fillRect(60, 40, 680, 110); 
+        ctx.fillStyle = "#222"; ctx.fillRect(120, 60, 140, 70);
+        ctx.fillRect(540, 60, 140, 70);
+        ctx.fillStyle = "#00ffcc"; ctx.font = "12px Courier New";
+        ctx.fillText("BUSCH STUDENT CENTER PLAZA STOP", 260, 30);
+    } else if (campus === "CD") {
+        ctx.fillStyle = "#142214"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#703020"; ctx.fillRect(60, 40, 680, 100); 
+        ctx.fillStyle = "#1e3a1e"; 
+        for(let t=0; t<8; t++) {
+            ctx.beginPath(); ctx.arc(80 + t * 90, 110, 25, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.fillStyle = "#aaffaa"; ctx.font = "12px Courier New";
+        ctx.fillText("BIEL ROAD BUS STOP (COOK / DOUGLASS)", 230, 30);
+    } else {
+        ctx.fillStyle = "#101826"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#2a3b52"; ctx.fillRect(60, 35, 680, 115);
+        ctx.fillStyle = "#4af"; ctx.fillRect(100, 60, 120, 80); 
+        ctx.fillRect(340, 60, 120, 80);
+        ctx.fillRect(580, 60, 120, 80);
+        ctx.fillStyle = "#00ffff"; ctx.font = "12px Courier New";
+        ctx.fillText("LIVINGSTON STUDENT CENTER PLAZA", 260, 30);
+    }
+
+    // Street Road & Sidewalk Waiting Area
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 200, canvas.width, 300);
+    ctx.fillStyle = "#777"; 
+    ctx.fillRect(200, 230, 420, 240);
+    ctx.fillStyle = "#555"; 
+    ctx.fillRect(200, 230, 420, 16);
 
     // Bus Drawing
     ctx.fillStyle = "#cc0033"; 
@@ -329,25 +435,25 @@ function renderStage1() {
     
     // Rutgers Gold Stripe
     ctx.fillStyle = "#ffcc00";
-    ctx.fillRect(bus.x, bus.y + 80, bus.w, 15);
+    ctx.fillRect(bus.x, bus.y + 75, bus.w, 14);
 
     // Bus Windows
     ctx.fillStyle = "#111";
-    ctx.fillRect(bus.x + 15, bus.y + 20, 35, 45);
-    ctx.fillRect(bus.x + 70, bus.y + 20, 35, 45);
-    ctx.fillRect(bus.x + 15, bus.y + 110, 35, 45);
-    ctx.fillRect(bus.x + 70, bus.y + 110, 35, 45);
+    ctx.fillRect(bus.x + 15, bus.y + 15, 35, 45);
+    ctx.fillRect(bus.x + 70, bus.y + 15, 35, 45);
+    ctx.fillRect(bus.x + 15, bus.y + 105, 35, 45);
+    ctx.fillRect(bus.x + 70, bus.y + 105, 35, 45);
 
     // Bus Door
     ctx.fillStyle = "#ddd";
     ctx.fillRect(bus.doorX - 15, bus.doorY - 15, 30, 30);
     ctx.fillStyle = "#111";
-    ctx.font = "10px Courier New";
+    ctx.font = "9px Courier New";
     ctx.fillText("DOOR", bus.doorX - 12, bus.doorY + 3);
 
-    // Draw Crowd NPCs
+    // Draw Crowd NPCs on Sidewalk
     npcs.forEach(npc => {
-        if (npc.x < 0) return;
+        if (npc.x < -500) return;
         if (spriteLoaded) {
             ctx.drawImage(studentSprite, npc.x - 12, npc.y - 12, 24, 24);
         } else {
@@ -368,10 +474,10 @@ function renderStage1() {
         ctx.fill();
     }
 
-    // Punch Effect Visual
+    // Punch Shockwave Visual Feedback
     if (player.isPunching) {
         ctx.strokeStyle = "#ffff00";
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.arc(player.x, player.y, 35, 0, Math.PI * 2);
         ctx.stroke();
@@ -379,7 +485,6 @@ function renderStage1() {
 }
 
 function renderStage2() {
-    // Bus Interior Background
     ctx.fillStyle = "#1a1a1a";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -397,7 +502,7 @@ function renderStage2() {
     ctx.fillStyle = "#3a3a3a";
     ctx.fillRect(140, 0, 520, canvas.height);
 
-    // Side Seats (Rutgers Blue paired seats)
+    // Side Seats
     ctx.fillStyle = "#1e3a8a"; 
     for (let i = 0; i < 5; i++) {
         ctx.fillRect(55, 60 + i * 72, 75, 48);
@@ -408,7 +513,7 @@ function renderStage2() {
         ctx.strokeRect(670, 60 + i * 72, 75, 48);
     }
 
-    // Yellow Grab Poles along the aisle
+    // Yellow Grab Poles
     ctx.strokeStyle = "#ffcc00";
     ctx.lineWidth = 6;
     ctx.beginPath();
@@ -416,14 +521,13 @@ function renderStage2() {
     ctx.moveTo(600, 0); ctx.lineTo(600, 420);
     ctx.stroke();
 
-    // Driver Seat & Dashboard Area
+    // Driver Area
     ctx.fillStyle = "#222";
     ctx.fillRect(300, 0, 200, 75);
     ctx.strokeStyle = "#cc0033";
     ctx.lineWidth = 2;
     ctx.strokeRect(300, 0, 200, 75);
     
-    // Driver NPC
     ctx.fillStyle = "#ffaa00";
     ctx.beginPath();
     ctx.arc(400, 30, 14, 0, Math.PI * 2);
@@ -442,7 +546,7 @@ function renderStage2() {
         ctx.fill();
     }
 
-    // Player Standing & Balance Indicator in Aisle
+    // Player Balance
     let playerX = 400 + busBalance * 2;
     ctx.fillStyle = "#00ffcc";
     ctx.beginPath();
@@ -453,7 +557,7 @@ function renderStage2() {
     ctx.font = "10px Courier New";
     ctx.fillText("YOU", playerX - 10, 380);
 
-    // Balance Bar UI at Bottom
+    // Balance Bar UI
     ctx.fillStyle = "#222";
     ctx.fillRect(200, 440, 400, 25);
     ctx.fillStyle = Math.abs(busBalance) > 70 ? "#ff3333" : "#00ffcc";
@@ -462,7 +566,6 @@ function renderStage2() {
     ctx.lineWidth = 2;
     ctx.strokeRect(200, 440, 400, 25);
 
-    // Trip Progress and Instructions
     ctx.fillStyle = "#fff";
     ctx.font = "14px Courier New";
     ctx.fillText(`Trip Progress: ${Math.floor(stage2Progress)}%`, 310, 22);
@@ -479,23 +582,24 @@ function renderEndScreen(isWin) {
         ctx.fillText("YOU MADE IT TO CLASS!", 220, 220);
         ctx.font = "18px Courier New";
         ctx.fillStyle = "#fff";
-        ctx.fillText("You survived the RU Bus system peak hours.", 190, 270);
+        ctx.fillText("You survived peak hours on the RU bus system.", 190, 270);
     } else {
         ctx.fillStyle = "#ff3333";
         ctx.fillText("YOU LOST!", 330, 200);
         ctx.font = "18px Courier New";
         ctx.fillStyle = "#fff";
-        ctx.fillText("You missed the bus or went flying during a break!", 140, 250);
+        ctx.fillText("You missed the bus, ran out of time, or went flying!", 130, 250);
         ctx.fillText("You are late to class and failed the semester.", 160, 280);
     }
 
     ctx.fillStyle = "#aaa";
-    ctx.fillText("Click anywhere to return to Route Selection", 180, 350);
+    ctx.font = "15px Courier New";
+    ctx.fillText("Click anywhere to return to Route Selection", 210, 350);
 }
 
 function gameLoop(time) {
     let dt = (time - lastTime) / 1000;
-    if (isNaN(dt)) dt = 0;
+    if (isNaN(dt) || dt > 0.1) dt = 0.016;
     lastTime = time;
 
     update(dt);
