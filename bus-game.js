@@ -23,6 +23,13 @@ buschBgImg.onload = () => {
     buschBgLoaded = true;
 };
 
+const CDBgImg = new Image();
+CDBgImg.src = 'Red Oak Lane Bus Stop.png'; // Make sure your image file is named this or update the path
+let CDBgLoaded = false;
+CDBgImg.onload = () => {
+    CDBgLoaded = true;
+};
+
 // Game States
 const STATES = { ROUTE_SELECT: 0, STAGE1_STOP: 1, TRANSITION: 2, STAGE2_BUS: 3,
                      WIN: 4, GAME_OVER: 5, STAGE3_WALK: 6 };
@@ -146,8 +153,8 @@ function startRoute(routeIdx) {
     timeLeft = route.time;
     currentState = STATES.STAGE1_STOP;
     
-    player.x = 380;
-    player.y = 330;
+    player.x = 250;   // farther back, away from the bus
+    player.y = 390;
     player.vx = 0;
     player.vy = 0;
     
@@ -172,11 +179,19 @@ function startRoute(routeIdx) {
     }
     
     // Higher crowd density for stage 1
+        // Bigger crowd for stage 1 (all campuses)
     npcs = [];
-    for (let i = 0; i < 28; i++) {
+    const CROWD_SIZE = 50;   // was 28, raise or lower to taste
+    while (npcs.length < CROWD_SIZE) {
+        const nx = 270 + Math.random() * 280;
+        const ny = 230 + Math.random() * 190;
+
+        // Don't spawn on top of the player's starting spot
+        if (Math.hypot(nx - player.x, ny - player.y) < 45) continue;
+
         npcs.push({
-            x: 300 + Math.random() * 200,
-            y: 250 + Math.random() * 150,
+            x: nx,
+            y: ny,
             vx: (Math.random() - 0.5) * 0.6,
             vy: (Math.random() - 0.5) * 0.6,
             stunned: 0,
@@ -231,6 +246,23 @@ function update(dt) {
    }
 }
 
+// Bus collision: solid everywhere except a doorway around the door
+const DOOR_OPEN_RADIUS = 40;   // how big the doorway is, bigger = easier to enter
+
+function hitsBus(x, y) {
+    // Doorway is always passable
+    if (Math.hypot(x - bus.doorX, y - bus.doorY) < DOOR_OPEN_RADIUS) return false;
+
+    // Player body box (roughly the sprite's torso and legs)
+    const left   = x - 7;
+    const right  = x + 7;
+    const top    = y - 4;
+    const bottom = y + 13;
+
+    return right > bus.x && left < bus.x + bus.w &&
+           bottom > bus.y && top < bus.y + bus.h;
+}
+
 function updateStage1(dt) {
     player.vx = 0;
     player.vy = 0;
@@ -239,8 +271,8 @@ function updateStage1(dt) {
     if (keys['a'] || keys['A']) player.vx = -player.speed;
     if (keys['d'] || keys['D']) player.vx = player.speed;
 
-    player.x += player.vx;
-    player.y += player.vy;
+    if (!hitsBus(player.x + player.vx, player.y)) player.x += player.vx;
+    if (!hitsBus(player.x, player.y + player.vy)) player.y += player.vy;
 
     player.x = Math.max(220, Math.min(canvas.width - 120, player.x));
     player.y = Math.max(180, Math.min(canvas.height - 50, player.y));
@@ -266,6 +298,8 @@ function updateStage1(dt) {
         if (player.punchTimer < 22) player.isPunching = false;
     }
 
+    const prevPX = player.x, prevPY = player.y;
+
     npcs.forEach(npc => {
         if (npc.stunned > 0) {
             npc.stunned--;
@@ -284,6 +318,10 @@ function updateStage1(dt) {
             npc.x += (dx / dist) * 0.7;
             npc.y += (dy / dist) * 0.7;
         } else {
+                if (hitsBus(player.x, player.y)) {
+        player.x = prevPX;
+        player.y = prevPY;
+    }
             if (bus.passengers < bus.maxPassengers) {
                 bus.passengers++;
                 npc.x = -9999; 
@@ -445,16 +483,12 @@ function renderStage1() {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
     } else if (campus === "CD") {
-        ctx.fillStyle = "#142214"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#703020"; ctx.fillRect(60, 40, 680, 100); 
-        ctx.fillStyle = "#1e3a1e"; 
-        for(let t=0; t<8; t++) {
-            ctx.beginPath(); ctx.arc(80 + t * 90, 110, 25, 0, Math.PI*2); ctx.fill();
+        if (CDBgLoaded) {
+            ctx.drawImage(CDBgImg, 0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = "#f5f2e3";   // fallback while the image loads
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
-        ctx.fillStyle = "#aaffaa"; ctx.font = "bold 13px 'Courier New'";
-        ctx.textAlign = "center";
-        ctx.fillText("BIEL ROAD BUS STOP (COOK / DOUGLASS)", 400, 95);
-        ctx.textAlign = "left";
     } else {
         // --- RENDER ACTUAL LIVINGSTON BACKGROUND IMAGE ---
         if (liviBgLoaded) {
@@ -467,7 +501,7 @@ function renderStage1() {
     }
 
     // 2. Render Default Road/Platform Box ONLY for non-Livingston routes
-    if (campus !== "Livi" && campus !== "College Ave" && campus !== "Busch") {
+    if (campus !== "Livi" && campus !== "College Ave" && campus !== "Busch" && campus !== "CD") {
         ctx.fillStyle = "#222";
         ctx.fillRect(0, 200, canvas.width, 300);
         ctx.fillStyle = "#777"; 
