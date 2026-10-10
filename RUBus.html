@@ -69,7 +69,7 @@
         <div id="ui">
             <div id="route-info">Route: CA ➔ Busch</div>
             <div>
-                <span id="bus-capacity-text">Bus: 0/15</span>
+                <span id="bus-capacity-text">Bus: 0/18</span>
                 <div class="capacity-bar-container"><div id="capacity-fill" class="capacity-fill"></div></div>
             </div>
             <div id="timer" style="color: #ffcc00;">Time Left: 90s</div>
@@ -78,7 +78,7 @@
     </div>
 
     <div id="controls-hint">
-        <strong>Controls:</strong> Stage 1: [WASD] Move | [Q] Punch/Push Students | Stage 2: [A/D] Balance Against Bus Brakes
+        <strong>Controls:</strong> Stage 1: [WASD] Move | [Q] Punch/Push Students | Stage 2: [A/D] Balance & Resist Crowds
     </div>
 
 <script>
@@ -86,17 +86,17 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // Game States
-const STATES = { ROUTE_SELECT: 0, STAGE1_STOP: 1, STAGE2_BUS: 2, WIN: 3, GAME_OVER: 4 };
+const STATES = { ROUTE_SELECT: 0, STAGE1_STOP: 1, TRANSITION: 2, STAGE2_BUS: 3, WIN: 4, GAME_OVER: 5 };
 let currentState = STATES.ROUTE_SELECT;
 
-// Route Configurations
+// Route Configurations (Livi to Busch corrected to Route B)
 const ROUTES = [
-    { id: "CA", dest: "Busch", name: "CA ➔ Busch (Route B)", time: 85, maxBusCapacity: 14, campus: "College Ave" },
-    { id: "Busch", dest: "CD", name: "Busch ➔ CD (Route REXB)", time: 95, maxBusCapacity: 16, campus: "Busch" },
-    { id: "CD", dest: "CA", name: "CD ➔ CA (Route EE)", time: 90, maxBusCapacity: 15, campus: "CD" },
-    { id: "CD", dest: "Livi", name: "CD ➔ Livi (Route REXL)", time: 95, maxBusCapacity: 16, campus: "CD" },
-    { id: "Busch", dest: "Livi", name: "Busch ➔ Livi (Route C)", time: 80, maxBusCapacity: 12, campus: "Busch" },
-    { id: "CA", dest: "Livi", name: "CA ➔ Livi (Route LX)", time: 85, maxBusCapacity: 18, campus: "College Ave" }
+    { id: "CA", dest: "Busch", name: "CA ➔ Busch (Route B)", time: 85, maxBusCapacity: 18, campus: "College Ave" },
+    { id: "Busch", dest: "CD", name: "Busch ➔ CD (Route REXB)", time: 95, maxBusCapacity: 20, campus: "Busch" },
+    { id: "CD", dest: "CA", name: "CD ➔ CA (Route EE)", time: 90, maxBusCapacity: 18, campus: "CD" },
+    { id: "CD", dest: "Livi", name: "CD ➔ Livi (Route REXL)", time: 95, maxBusCapacity: 20, campus: "CD" },
+    { id: "Livi", dest: "Busch", name: "Livi ➔ Busch (Route B)", time: 80, maxBusCapacity: 16, campus: "Livi" },
+    { id: "CA", dest: "Livi", name: "CA ➔ Livi (Route LX)", time: 85, maxBusCapacity: 22, campus: "College Ave" }
 ];
 let currentRouteIdx = 0;
 
@@ -106,22 +106,20 @@ const SHIRT_COLORS = ["#dc2626", "#059669", "#7c3aed", "#ea580c", "#2563eb", "#0
 const BAG_COLORS = ["#facc15", "#06b6d4", "#84cc16", "#d946ef", "#f97316"];
 const PANTS_COLORS = ["#1e3a8a", "#1e293b", "#334155", "#78350f"];
 
-// Timer & Game UI Variables
 let timeLeft = 0;
 let lastTime = 0;
+let transitionTimer = 0;
 
-// Inputs tracking
 const keys = {};
 window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
-// Mouse Input for Route Selection and Game Resets
 canvas.addEventListener('click', (e) => {
     if (currentState === STATES.ROUTE_SELECT) {
         const rect = canvas.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const clickY = e.clientY - rect.top;
-        const startY = 135;
+        const startY = 175; // Adjusted down for lower title
         for (let i = 0; i < ROUTES.length; i++) {
             if (clickX >= 180 && clickX <= 620 && clickY >= startY + i * 50 && clickY <= startY + i * 50 + 40) {
                 startRoute(i);
@@ -133,7 +131,6 @@ canvas.addEventListener('click', (e) => {
     }
 });
 
-// Helper Function: Generates random style properties for NPCs
 function getRandomStudentStyle() {
     return {
         hair: HAIR_COLORS[Math.floor(Math.random() * HAIR_COLORS.length)],
@@ -144,7 +141,6 @@ function getRandomStudentStyle() {
     };
 }
 
-// Custom Player Character Style
 const playerStyle = {
     hair: "#0284c7",
     shirt: "#dc2626",
@@ -153,59 +149,40 @@ const playerStyle = {
     skin: "#fbbf24"
 };
 
-// Game Entities
 let player = { x: 380, y: 330, vx: 0, vy: 0, speed: 2.8, isPunching: false, punchTimer: 0, style: playerStyle };
-let bus = { x: 460, y: 150, w: 120, h: 240, passengers: 0, maxPassengers: 15, doorX: 520, doorY: 320 };
+let bus = { x: 460, y: 150, w: 120, h: 240, passengers: 0, maxPassengers: 18, doorX: 520, doorY: 320 };
 let npcs = [];
 let busBalance = 0;
 let busForce = 0;
 let stage2Progress = 0;
+let busNpcs = [];
 
-// --- PIXEL ART RENDERING FOR STUDENT MODELS ---
 function drawPixelStudent(x, y, style, scale = 1, isStunned = false) {
     ctx.save();
     ctx.translate(x, y);
-
-    // Stun Flash effect
     if (isStunned) {
         ctx.shadowColor = "#ff3300";
         ctx.shadowBlur = 10;
     }
-
-    const p = scale * 1.5; // Pixel size scalar (creates nice small pixel art model)
-
-    // Hair
+    const p = scale * 1.5;
     ctx.fillStyle = style.hair;
     ctx.fillRect(-4 * p, -14 * p, 8 * p, 4 * p);
     ctx.fillRect(-5 * p, -12 * p, 3 * p, 4 * p);
-
-    // Face / Skin
     ctx.fillStyle = style.skin;
     ctx.fillRect(-3 * p, -10 * p, 6 * p, 4 * p);
-
-    // Backpack (Back view)
     ctx.fillStyle = style.bag;
     ctx.fillRect(-5 * p, -5 * p, 3 * p, 7 * p);
-
-    // Shirt / Hoodie Body
     ctx.fillStyle = style.shirt;
     ctx.fillRect(-3 * p, -6 * p, 6 * p, 6 * p);
-    
-    // Backpack Straps
     ctx.fillStyle = style.bag;
     ctx.fillRect(-2 * p, -6 * p, 1 * p, 6 * p);
     ctx.fillRect(1 * p, -6 * p, 1 * p, 6 * p);
-
-    // Pants
     ctx.fillStyle = style.pants;
     ctx.fillRect(-3 * p, 0, 2.5 * p, 7 * p);
     ctx.fillRect(0.5 * p, 0, 2.5 * p, 7 * p);
-
-    // Shoes
     ctx.fillStyle = "#701a75";
     ctx.fillRect(-4 * p, 7 * p, 3 * p, 2 * p);
     ctx.fillRect(1 * p, 7 * p, 3 * p, 2 * p);
-
     ctx.restore();
 }
 
@@ -216,8 +193,9 @@ function resetToMenu() {
     stage2Progress = 0;
     busBalance = 0;
     npcs = [];
+    busNpcs = [];
     document.getElementById('timer').innerText = `Time Left: --`;
-    document.getElementById('bus-capacity-text').innerText = `Bus: 0/15`;
+    document.getElementById('bus-capacity-text').innerText = `Bus: 0/18`;
     document.getElementById('capacity-fill').style.width = '0%';
 }
 
@@ -241,12 +219,12 @@ function startRoute(routeIdx) {
     bus.doorX = 520;
     bus.doorY = 320;
     
-    // Spawn Crowd NPCs with random color palettes
+    // Higher crowd density for stage 1
     npcs = [];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 28; i++) {
         npcs.push({
-            x: 320 + Math.random() * 160,
-            y: 260 + Math.random() * 130,
+            x: 300 + Math.random() * 200,
+            y: 250 + Math.random() * 150,
             vx: (Math.random() - 0.5) * 0.6,
             vy: (Math.random() - 0.5) * 0.6,
             stunned: 0,
@@ -260,8 +238,26 @@ function startRoute(routeIdx) {
     lastTime = performance.now();
 }
 
+function initStage2() {
+    currentState = STATES.STAGE2_BUS;
+    busBalance = 0;
+    busForce = 0;
+    stage2Progress = 0;
+    
+    // Populate seats & aisle with packed passenger NPCs
+    busNpcs = [];
+    const seatRows = 6;
+    for (let i = 0; i < seatRows; i++) {
+        busNpcs.push({ x: 90, y: 70 + i * 60, offset: 0, style: getRandomStudentStyle() });
+        busNpcs.push({ x: 710, y: 70 + i * 60, offset: 0, style: getRandomStudentStyle() });
+    }
+    for (let i = 0; i < 8; i++) {
+        busNpcs.push({ x: 260 + (i % 2) * 280, y: 90 + Math.floor(i / 2) * 75, offset: (Math.random() - 0.5) * 15, style: getRandomStudentStyle() });
+    }
+}
+
 function update(dt) {
-    if (currentState !== STATES.STAGE1_STOP && currentState !== STATES.STAGE2_BUS) return;
+    if (currentState !== STATES.STAGE1_STOP && currentState !== STATES.STAGE2_BUS && currentState !== STATES.TRANSITION) return;
 
     timeLeft -= dt;
     if (timeLeft <= 0) {
@@ -272,6 +268,11 @@ function update(dt) {
 
     if (currentState === STATES.STAGE1_STOP) {
         updateStage1(dt);
+    } else if (currentState === STATES.TRANSITION) {
+        transitionTimer -= dt;
+        if (transitionTimer <= 0) {
+            initStage2();
+        }
     } else if (currentState === STATES.STAGE2_BUS) {
         updateStage2(dt);
     }
@@ -291,7 +292,6 @@ function updateStage1(dt) {
     player.x = Math.max(220, Math.min(canvas.width - 120, player.x));
     player.y = Math.max(180, Math.min(canvas.height - 50, player.y));
 
-    // Punch / Push Mechanic
     if ((keys['q'] || keys['Q']) && player.punchTimer <= 0) {
         player.isPunching = true;
         player.punchTimer = 30;
@@ -328,8 +328,8 @@ function updateStage1(dt) {
         let dist = Math.hypot(dx, dy);
 
         if (dist > 14) {
-            npc.x += (dx / dist) * 0.65;
-            npc.y += (dy / dist) * 0.65;
+            npc.x += (dx / dist) * 0.7;
+            npc.y += (dy / dist) * 0.7;
         } else {
             if (bus.passengers < bus.maxPassengers) {
                 bus.passengers++;
@@ -351,22 +351,35 @@ function updateStage1(dt) {
 
     let doorDist = Math.hypot(bus.doorX - player.x, bus.doorY - player.y);
     if (doorDist < 28 && bus.passengers < bus.maxPassengers) {
-        currentState = STATES.STAGE2_BUS; 
+        // Transition pause before Stage 2
+        currentState = STATES.TRANSITION;
+        transitionTimer = 1.5; 
     }
 }
 
 function updateStage2(dt) {
-    stage2Progress += dt * 6.5; 
+    stage2Progress += dt * 5.5; 
 
-    if (Math.random() < 0.025) {
-        busForce += (Math.random() - 0.5) * 6.5; 
+    if (Math.random() < 0.03) {
+        busForce += (Math.random() - 0.5) * 5.0; 
     }
     
-    busForce *= 0.94; 
+    // Easier balancing: gentle damping and collision shove resistance
+    busForce *= 0.92; 
     busBalance += busForce;
 
-    if (keys['a'] || keys['arrowleft']) busBalance -= 1.4;
-    if (keys['d'] || keys['arrowright']) busBalance += 1.4;
+    // NPC Collision effect inside the bus
+    busNpcs.forEach(npc => {
+        let targetX = npc.x + npc.offset;
+        let playerX = 400 + busBalance * 1.8;
+        if (Math.abs(targetX - playerX) < 22) {
+            // Push player slightly based on crowd pressure
+            busForce += (targetX > playerX ? -0.35 : 0.35);
+        }
+    });
+
+    if (keys['a'] || keys['arrowleft']) busBalance -= 1.6;
+    if (keys['d'] || keys['arrowright']) busBalance += 1.6;
 
     if (Math.abs(busBalance) > 100) {
         currentState = STATES.GAME_OVER;
@@ -380,7 +393,7 @@ function updateStage2(dt) {
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (currentState !== STATES.ROUTE_SELECT && currentState !== STATES.WIN && currentState !== STATES.GAME_OVER) {
+    if (currentState !== STATES.ROUTE_SELECT && currentState !== STATES.WIN && currentState !== STATES.GAME_OVER && currentState !== STATES.TRANSITION) {
         const route = ROUTES[currentRouteIdx];
         document.getElementById('timer').innerText = `Time Left: ${Math.ceil(timeLeft)}s`;
         document.getElementById('route-info').innerText = `Route: ${route.name}`;
@@ -394,6 +407,9 @@ function render() {
         renderRouteSelect();
     } else if (currentState === STATES.STAGE1_STOP) {
         renderStage1();
+    } else if (currentState === STATES.TRANSITION) {
+        renderStage1();
+        renderTransitionOverlay();
     } else if (currentState === STATES.STAGE2_BUS) {
         renderStage2();
     } else if (currentState === STATES.WIN) {
@@ -407,15 +423,18 @@ function renderRouteSelect() {
     ctx.fillStyle = "#161616";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // Moved down and centered nicely
     ctx.fillStyle = "#cc0033";
-    ctx.font = "bold 26px Courier New";
-    ctx.fillText("THE RU BUS EXPERIENCE GAME", 170, 55);
+    ctx.font = "bold 28px Courier New";
+    ctx.textAlign = "center";
+    ctx.fillText("THE RU BUS EXPERIENCE GAME", canvas.width / 2, 85);
     
     ctx.fillStyle = "#fff";
     ctx.font = "16px Courier New";
-    ctx.fillText("Select your campus route to get to class on time:", 170, 95);
+    ctx.fillText("Select your campus route to get to class on time:", canvas.width / 2, 130);
+    ctx.textAlign = "left";
 
-    const startY = 135;
+    const startY = 175;
     ROUTES.forEach((route, i) => {
         ctx.fillStyle = "#262626";
         ctx.fillRect(180, startY + i * 50, 440, 40);
@@ -436,7 +455,6 @@ function renderRouteSelect() {
 function renderStage1() {
     const campus = ROUTES[currentRouteIdx].campus;
 
-    // Background Rendering
     if (campus === "College Ave") {
         ctx.fillStyle = "#2b1810"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#8b3a2b"; ctx.fillRect(50, 40, 700, 120); 
@@ -470,7 +488,6 @@ function renderStage1() {
         ctx.fillText("LIVINGSTON STUDENT CENTER PLAZA", 260, 30);
     }
 
-    // Street Road & Sidewalk
     ctx.fillStyle = "#222";
     ctx.fillRect(0, 200, canvas.width, 300);
     ctx.fillStyle = "#777"; 
@@ -478,11 +495,9 @@ function renderStage1() {
     ctx.fillStyle = "#555"; 
     ctx.fillRect(200, 230, 420, 16);
 
-    // Bus Drawing
     ctx.fillStyle = "#cc0033"; 
     ctx.fillRect(bus.x, bus.y, bus.w, bus.h);
     
-    // Stripe & Windows
     ctx.fillStyle = "#ffcc00";
     ctx.fillRect(bus.x, bus.y + 75, bus.w, 14);
     ctx.fillStyle = "#111";
@@ -491,23 +506,19 @@ function renderStage1() {
     ctx.fillRect(bus.x + 15, bus.y + 105, 35, 45);
     ctx.fillRect(bus.x + 70, bus.y + 105, 35, 45);
 
-    // Door
     ctx.fillStyle = "#ddd";
     ctx.fillRect(bus.doorX - 15, bus.doorY - 15, 30, 30);
     ctx.fillStyle = "#111";
     ctx.font = "9px Courier New";
     ctx.fillText("DOOR", bus.doorX - 12, bus.doorY + 3);
 
-    // Draw Student NPCs with Custom Pixel Models
     npcs.forEach(npc => {
         if (npc.x < -500) return;
         drawPixelStudent(npc.x, npc.y, npc.style, 0.9, npc.stunned > 0);
     });
 
-    // Draw Player Character Model
     drawPixelStudent(player.x, player.y, player.style, 1.0, false);
 
-    // Punch Shockwave Visual Feedback
     if (player.isPunching) {
         ctx.strokeStyle = "#ffff00";
         ctx.lineWidth = 3;
@@ -517,11 +528,20 @@ function renderStage1() {
     }
 }
 
+function renderTransitionOverlay() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#00ffcc";
+    ctx.font = "bold 24px Courier New";
+    ctx.textAlign = "center";
+    ctx.fillText("BOARDED THE BUS! HOLD ON...", canvas.width / 2, canvas.height / 2);
+    ctx.textAlign = "left";
+}
+
 function renderStage2() {
     ctx.fillStyle = "#1a1a1a";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Side Windows
     ctx.fillStyle = "#223344";
     ctx.fillRect(50, 40, 90, 370);
     ctx.fillRect(660, 40, 90, 370);
@@ -531,11 +551,9 @@ function renderStage2() {
     ctx.strokeRect(50, 40, 90, 370);
     ctx.strokeRect(660, 40, 90, 370);
 
-    // Bus Center Aisle Floor
     ctx.fillStyle = "#3a3a3a";
     ctx.fillRect(140, 0, 520, canvas.height);
 
-    // Side Seats
     ctx.fillStyle = "#1e3a8a"; 
     for (let i = 0; i < 5; i++) {
         ctx.fillRect(55, 60 + i * 72, 75, 48);
@@ -546,7 +564,6 @@ function renderStage2() {
         ctx.strokeRect(670, 60 + i * 72, 75, 48);
     }
 
-    // Yellow Grab Poles
     ctx.strokeStyle = "#ffcc00";
     ctx.lineWidth = 6;
     ctx.beginPath();
@@ -554,7 +571,6 @@ function renderStage2() {
     ctx.moveTo(600, 0); ctx.lineTo(600, 420);
     ctx.stroke();
 
-    // Driver Area
     ctx.fillStyle = "#222";
     ctx.fillRect(300, 0, 200, 75);
     ctx.strokeStyle = "#cc0033";
@@ -569,26 +585,21 @@ function renderStage2() {
     ctx.font = "10px Courier New";
     ctx.fillText("DRIVER", 380, 62);
 
-    // Render Passengers Inside Bus
-    for (let i = 0; i < 10; i++) {
-        let px = 240 + (i % 2) * 320 + Math.sin(stage2Progress * 0.1 + i) * 4;
-        let py = 100 + Math.floor(i / 2) * 60;
-        let style = (i % 2 === 0) ? getRandomStudentStyle() : playerStyle;
-        drawPixelStudent(px, py, style, 0.85);
-    }
+    // Render seated & standing passengers properly on seats/aisles
+    busNpcs.forEach(npc => {
+        drawPixelStudent(npc.x + npc.offset, npc.y, npc.style, 0.85);
+    });
 
-    // Render Player Character in Aisle
-    let playerX = 400 + busBalance * 2;
+    let playerX = 400 + busBalance * 1.8;
     drawPixelStudent(playerX, 350, playerStyle, 1.0);
     
     ctx.fillStyle = "#00ffcc";
     ctx.font = "bold 11px Courier New";
     ctx.fillText("YOU", playerX - 10, 380);
 
-    // Balance Bar UI
     ctx.fillStyle = "#222";
     ctx.fillRect(200, 440, 400, 25);
-    ctx.fillStyle = Math.abs(busBalance) > 70 ? "#ff3333" : "#00ffcc";
+    ctx.fillStyle = Math.abs(busBalance) > 75 ? "#ff3333" : "#00ffcc";
     ctx.fillRect(400, 440, busBalance * 2, 25);
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
@@ -597,7 +608,7 @@ function renderStage2() {
     ctx.fillStyle = "#fff";
     ctx.font = "14px Courier New";
     ctx.fillText(`Trip Progress: ${Math.floor(stage2Progress)}%`, 310, 22);
-    ctx.fillText("HOLD ON FOR DEAR LIFE! (Use A/D to Balance)", 185, 425);
+    ctx.fillText("HOLD ON! (Resist Crowds & Brakes with A/D)", 175, 425);
 }
 
 function renderEndScreen(isWin) {
@@ -605,24 +616,26 @@ function renderEndScreen(isWin) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.font = "32px Courier New";
+    ctx.textAlign = "center";
     if (isWin) {
         ctx.fillStyle = "#00ffcc";
-        ctx.fillText("YOU MADE IT TO CLASS!", 220, 220);
+        ctx.fillText("YOU MADE IT TO CLASS!", canvas.width / 2, 200);
         ctx.font = "18px Courier New";
         ctx.fillStyle = "#fff";
-        ctx.fillText("You survived peak hours on the RU bus system.", 190, 270);
+        ctx.fillText("You survived peak hours on the RU bus system.", canvas.width / 2, 250);
     } else {
         ctx.fillStyle = "#ff3333";
-        ctx.fillText("YOU LOST!", 330, 200);
+        ctx.fillText("YOU LOST!", canvas.width / 2, 180);
         ctx.font = "18px Courier New";
         ctx.fillStyle = "#fff";
-        ctx.fillText("You missed the bus, ran out of time, or went flying!", 130, 250);
-        ctx.fillText("You are late to class and failed the semester.", 160, 280);
+        ctx.fillText("You missed the bus, ran out of time, or went flying!", canvas.width / 2, 230);
+        ctx.fillText("You are late to class and failed the semester.", canvas.width / 2, 260);
     }
 
     ctx.fillStyle = "#aaa";
     ctx.font = "15px Courier New";
-    ctx.fillText("Click anywhere to return to Route Selection", 210, 350);
+    ctx.fillText("Click anywhere to return to Route Selection", canvas.width / 2, 330);
+    ctx.textAlign = "left";
 }
 
 function gameLoop(time) {
