@@ -498,7 +498,7 @@ function renderStage2() {
     ctx.fill();
     ctx.fillStyle = "#fff";
     ctx.font = "10px Courier New";
-    ctx.fillText("DRIVER", 380, 62);
+    ctx.fillText("BHANU", 380, 62);
 
     busNpcs.forEach(npc => {
         drawPixelStudent(npc.x + npc.offset, npc.y, npc.style, 0.85);
