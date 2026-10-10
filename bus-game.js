@@ -16,6 +16,13 @@ cayaBgImg.onload = () => {
     cayaBgLoaded = true;
 };
 
+const buschBgImg = new Image();
+buschBgImg.src = 'Busch Student Center Bus Stop.png'; // Make sure your image file is named this or update the path
+let buschBgLoaded = false;
+buschBgImg.onload = () => {
+    buschBgLoaded = true;
+};
+
 // Game States
 const STATES = { ROUTE_SELECT: 0, STAGE1_STOP: 1, TRANSITION: 2, STAGE2_BUS: 3,
                      WIN: 4, GAME_OVER: 5, STAGE3_WALK: 6 };
@@ -431,14 +438,12 @@ function renderStage1() {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
     } else if (campus === "Busch") {
-        ctx.fillStyle = "#182026"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#3a4a5a"; ctx.fillRect(60, 40, 680, 110); 
-        ctx.fillStyle = "#222"; ctx.fillRect(100, 60, 150, 70);
-        ctx.fillRect(550, 60, 150, 70);
-        ctx.fillStyle = "#00ffcc"; ctx.font = "bold 13px 'Courier New'";
-        ctx.textAlign = "center";
-        ctx.fillText("BUSCH STUDENT CENTER PLAZA", 400, 100);
-        ctx.textAlign = "left";
+        if (buschBgLoaded) {
+            ctx.drawImage(buschBgImg, 0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = "#f5f2e3";   // fallback while the image loads
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
     } else if (campus === "CD") {
         ctx.fillStyle = "#142214"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#703020"; ctx.fillRect(60, 40, 680, 100); 
@@ -462,7 +467,7 @@ function renderStage1() {
     }
 
     // 2. Render Default Road/Platform Box ONLY for non-Livingston routes
-    if (campus !== "Livi" && campus !== "College Ave") {
+    if (campus !== "Livi" && campus !== "College Ave" && campus !== "Busch") {
         ctx.fillStyle = "#222";
         ctx.fillRect(0, 200, canvas.width, 300);
         ctx.fillStyle = "#777"; 
