@@ -129,12 +129,12 @@ function startRoute(routeIdx) {
     
     bus.passengers = Math.floor(route.maxBusCapacity * 0.3);
     bus.maxPassengers = route.maxBusCapacity;
-    bus.x = 460;
-    bus.y = 150;
-    bus.w = 120;
-    bus.h = 240;
-    bus.doorX = 520;
-    bus.doorY = 320;
+    bus.x = 480;       // Positioned fully on the sidewalk
+    bus.y = 250;       // Clear space away from the background building doors
+    bus.w = 90;        // Smaller, better proportioned size
+    bus.h = 170;
+    bus.doorX = bus.x + 45;
+    bus.doorY = bus.y + 90;
     
     // Higher crowd density for stage 1
     npcs = [];
@@ -390,20 +390,21 @@ function renderRouteSelect() {
 function renderStage1() {
     const campus = ROUTES[currentRouteIdx].campus;
 
+    ctx.textAlign = "center";
     if (campus === "College Ave") {
         ctx.fillStyle = "#2b1810"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#8b3a2b"; ctx.fillRect(50, 40, 700, 120); 
-        ctx.fillStyle = "#112233"; ctx.fillRect(150, 70, 180, 90);  
-        ctx.fillRect(450, 70, 180, 90);
-        ctx.fillStyle = "#ffcc00"; ctx.font = "12px Courier New";
-        ctx.fillText("COLLEGE AVE STUDENT CENTER BUS STOP", 230, 30);
+        ctx.fillStyle = "#112233"; ctx.fillRect(100, 65, 180, 80);  
+        ctx.fillRect(520, 65, 180, 80);
+        ctx.fillStyle = "#ffcc00"; ctx.font = "bold 13px 'Courier New'";
+        ctx.fillText("COLLEGE AVE STUDENT CENTER", 400, 105);
     } else if (campus === "Busch") {
         ctx.fillStyle = "#182026"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#3a4a5a"; ctx.fillRect(60, 40, 680, 110); 
-        ctx.fillStyle = "#222"; ctx.fillRect(120, 60, 140, 70);
-        ctx.fillRect(540, 60, 140, 70);
-        ctx.fillStyle = "#00ffcc"; ctx.font = "12px Courier New";
-        ctx.fillText("BUSCH STUDENT CENTER PLAZA STOP", 260, 30);
+        ctx.fillStyle = "#222"; ctx.fillRect(100, 60, 150, 70);
+        ctx.fillRect(550, 60, 150, 70);
+        ctx.fillStyle = "#00ffcc"; ctx.font = "bold 13px 'Courier New'";
+        ctx.fillText("BUSCH STUDENT CENTER PLAZA", 400, 100);
     } else if (campus === "CD") {
         ctx.fillStyle = "#142214"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#703020"; ctx.fillRect(60, 40, 680, 100); 
@@ -411,17 +412,18 @@ function renderStage1() {
         for(let t=0; t<8; t++) {
             ctx.beginPath(); ctx.arc(80 + t * 90, 110, 25, 0, Math.PI*2); ctx.fill();
         }
-        ctx.fillStyle = "#aaffaa"; ctx.font = "12px Courier New";
-        ctx.fillText("BIEL ROAD BUS STOP (COOK / DOUGLASS)", 230, 30);
+        ctx.fillStyle = "#aaffaa"; ctx.font = "bold 13px 'Courier New'";
+        ctx.fillText("BIEL ROAD BUS STOP (COOK / DOUGLASS)", 400, 95);
     } else {
         ctx.fillStyle = "#101826"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#2a3b52"; ctx.fillRect(60, 35, 680, 115);
         ctx.fillStyle = "#4af"; ctx.fillRect(100, 60, 120, 80); 
         ctx.fillRect(340, 60, 120, 80);
         ctx.fillRect(580, 60, 120, 80);
-        ctx.fillStyle = "#00ffff"; ctx.font = "12px Courier New";
-        ctx.fillText("LIVINGSTON STUDENT CENTER PLAZA", 260, 30);
+        ctx.fillStyle = "#00ffff"; ctx.font = "bold 13px 'Courier New'";
+        ctx.fillText("LIVINGSTON STUDENT CENTER PLAZA", 400, 95);
     }
+    ctx.textAlign = "left";
 
     ctx.fillStyle = "#222";
     ctx.fillRect(0, 200, canvas.width, 300);
@@ -430,22 +432,50 @@ function renderStage1() {
     ctx.fillStyle = "#555"; 
     ctx.fillRect(200, 230, 420, 16);
 
-    ctx.fillStyle = "#cc0033"; 
-    ctx.fillRect(bus.x, bus.y, bus.w, bus.h);
-    
-    ctx.fillStyle = "#ffcc00";
-    ctx.fillRect(bus.x, bus.y + 75, bus.w, 14);
-    ctx.fillStyle = "#111";
-    ctx.fillRect(bus.x + 15, bus.y + 15, 35, 45);
-    ctx.fillRect(bus.x + 70, bus.y + 15, 35, 45);
-    ctx.fillRect(bus.x + 15, bus.y + 105, 35, 45);
-    ctx.fillRect(bus.x + 70, bus.y + 105, 35, 45);
+    // Detailed Red & White Pixel Transit Bus (Matching Isometric/2D Sprite Layout)
+    // Smaller, Aligned Transit Bus (Red & White with Natural Glass Door)
+    const bx = bus.x;
+    const by = bus.y;
 
-    ctx.fillStyle = "#ddd";
-    ctx.fillRect(bus.doorX - 15, bus.doorY - 15, 30, 30);
-    ctx.fillStyle = "#111";
-    ctx.font = "9px Courier New";
-    ctx.fillText("DOOR", bus.doorX - 12, bus.doorY + 3);
+    // Main Body
+    ctx.fillStyle = "#cc0033";
+    ctx.fillRect(bx, by, bus.w, bus.h);
+
+    // White Roof Top
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(bx, by, bus.w, 14);
+
+    // Tinted Windows
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(bx + 8, by + 22, 22, 35);
+    ctx.fillRect(bx + 34, by + 22, 22, 35);
+    ctx.fillRect(bx + 60, by + 22, 22, 35);
+
+    // Glass Highlights
+    ctx.fillStyle = "#38bdf8";
+    ctx.fillRect(bx + 10, by + 24, 7, 31);
+    ctx.fillRect(bx + 36, by + 24, 7, 31);
+    ctx.fillRect(bx + 62, by + 24, 7, 31);
+
+    // Natural Sliding Glass Passenger Door (No text sign)
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(bx + 28, by + 75, 34, 55);
+    ctx.fillStyle = "#0284c7"; // Glass tint
+    ctx.fillRect(bx + 31, by + 78, 13, 49);
+    ctx.fillRect(bx + 46, by + 78, 13, 49);
+    ctx.fillStyle = "#ffffff"; // Center door frame seal
+    ctx.fillRect(bx + 44, by + 78, 2, 49);
+
+    // Lower White Stripe Accent
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(bx, by + 145, bus.w, 6);
+
+    // Wheels
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(bx - 5, by + 30, 6, 20);
+    ctx.fillRect(bx - 5, by + 115, 6, 20);
+    ctx.fillRect(bx + bus.w - 1, by + 30, 6, 20);
+    ctx.fillRect(bx + bus.w - 1, by + 115, 6, 20);
 
     npcs.forEach(npc => {
         if (npc.x < -500) return;
