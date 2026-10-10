@@ -307,14 +307,29 @@ function updateStage2(dt) {
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Update Top UI Display
     if (currentState !== STATES.ROUTE_SELECT && currentState !== STATES.WIN && currentState !== STATES.GAME_OVER && currentState !== STATES.TRANSITION) {
         const route = ROUTES[currentRouteIdx];
         document.getElementById('timer').innerText = `Time Left: ${Math.ceil(timeLeft)}s`;
         document.getElementById('route-info').innerText = `Route: ${route.name}`;
-        document.getElementById('bus-capacity-text').innerText = `Bus: ${bus.passengers}/${bus.maxPassengers}`;
-        const fillPercent = (bus.passengers / bus.maxPassengers) * 100;
-        document.getElementById('capacity-fill').style.width = fillPercent + '%';
-        document.getElementById('capacity-fill').style.background = fillPercent >= 100 ? '#ff3333' : '#cc0033';
+
+        // Only show capacity bar in Stage 1
+        if (currentState === STATES.STAGE1_STOP) {
+            document.getElementById('bus-capacity-text').style.display = 'inline';
+            document.querySelector('.capacity-bar-container').style.display = 'inline-block';
+            document.getElementById('bus-capacity-text').innerText = `Bus: ${bus.passengers}/${bus.maxPassengers}`;
+            const fillPercent = (bus.passengers / bus.maxPassengers) * 100;
+            document.getElementById('capacity-fill').style.width = fillPercent + '%';
+            document.getElementById('capacity-fill').style.background = fillPercent >= 100 ? '#ff3333' : '#cc0033';
+        } else {
+            // Hide capacity bar during Stage 2
+            document.getElementById('bus-capacity-text').style.display = 'none';
+            document.querySelector('.capacity-bar-container').style.display = 'none';
+        }
+    } else {
+        // Reset visibility on menu / end screens
+        document.getElementById('bus-capacity-text').style.display = 'inline';
+        document.querySelector('.capacity-bar-container').style.display = 'inline-block';
     }
 
     if (currentState === STATES.ROUTE_SELECT) {
@@ -337,33 +352,38 @@ function renderRouteSelect() {
     ctx.fillStyle = "#161616";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // Title Header (Consistent Courier New)
     ctx.fillStyle = "#cc0033";
-    ctx.font = "bold 28px Courier New";
+    ctx.font = "bold 28px 'Courier New', Courier, monospace";
     ctx.textAlign = "center";
     ctx.fillText("THE RU BUS EXPERIENCE GAME", canvas.width / 2, 85);
     
+    // Subtitle Instructions (Consistent Courier New)
     ctx.fillStyle = "#fff";
-    ctx.font = "16px Courier New";
+    ctx.font = "16px 'Courier New', Courier, monospace";
     ctx.fillText("Select your campus route to get to class on time:", canvas.width / 2, 130);
     ctx.textAlign = "left";
 
     const startY = 175;
     ROUTES.forEach((route, i) => {
+        // Route Card Box
         ctx.fillStyle = "#262626";
         ctx.fillRect(180, startY + i * 50, 440, 40);
         ctx.strokeStyle = "#cc0033";
         ctx.lineWidth = 2;
         ctx.strokeRect(180, startY + i * 50, 440, 40);
 
+        // Route Name Label
         ctx.fillStyle = "#fff";
-        ctx.font = "bold 15px Courier New";
+        ctx.font = "15px 'Courier New', Courier, monospace";
         ctx.fillText(route.name, 200, startY + i * 50 + 25);
         
+        // Campus Tag Label (Right Aligned)
         ctx.fillStyle = "#ffcc00";
-        ctx.font = "12px Courier New";
-        ctx.textAlign = "right"; 
-        ctx.fillText(`Campus: ${route.campus}`, 600, startY + i * 50 + 25); 
-        ctx.textAlign = "left";  
+        ctx.font = "13px 'Courier New', Courier, monospace";
+        ctx.textAlign = "right";
+        ctx.fillText(`Campus: ${route.campus}`, 600, startY + i * 50 + 25);
+        ctx.textAlign = "left"; // Reset alignment back to left
     });
 }
 
@@ -497,9 +517,12 @@ function renderStage2() {
     ctx.arc(400, 30, 14, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#fff";
-    ctx.font = "10px Courier New";
-    ctx.fillText("BHANU", 380, 62);
+    ctx.font = "10px 'Courier New'";
+    ctx.textAlign = "center";
+    ctx.fillText("DRIVER", 400, 62);
+    ctx.textAlign = "left";
 
+    // Render seated & standing passengers properly on seats/aisles
     busNpcs.forEach(npc => {
         drawPixelStudent(npc.x + npc.offset, npc.y, npc.style, 0.85);
     });
@@ -508,9 +531,12 @@ function renderStage2() {
     drawPixelStudent(playerX, 350, playerStyle, 1.0);
     
     ctx.fillStyle = "#00ffcc";
-    ctx.font = "bold 11px Courier New";
-    ctx.fillText("YOU", playerX - 10, 380);
+    ctx.font = "bold 11px 'Courier New'";
+    ctx.textAlign = "center";
+    ctx.fillText("YOU", playerX, 380);
+    ctx.textAlign = "left";
 
+    // Balance Bar UI (Centered horizontally from X=200 to 600)
     ctx.fillStyle = "#222";
     ctx.fillRect(200, 440, 400, 25);
     ctx.fillStyle = Math.abs(busBalance) > 75 ? "#ff3333" : "#00ffcc";
@@ -519,10 +545,15 @@ function renderStage2() {
     ctx.lineWidth = 2;
     ctx.strokeRect(200, 440, 400, 25);
 
+    // Trip Progress and Centered Hold On Instructions directly above the balance bar
     ctx.fillStyle = "#fff";
-    ctx.font = "14px Courier New";
-    ctx.fillText(`Trip Progress: ${Math.floor(stage2Progress)}%`, 310, 22);
-    ctx.fillText("HOLD ON! (Resist Crowds & Brakes with A/D)", 175, 425);
+    ctx.font = "bold 13px 'Courier New'";
+    ctx.textAlign = "center";
+    ctx.fillText(`Trip Progress: ${Math.floor(stage2Progress)}%`, 400, 395);
+    
+    ctx.font = "13px 'Courier New'";
+    ctx.fillText("HOLD ON! (Resist Crowds & Brakes with A/D)", 400, 420);
+    ctx.textAlign = "left";
 }
 
 function renderEndScreen(isWin) {
