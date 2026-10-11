@@ -35,9 +35,24 @@ const bgMusic = new Audio('intense_action.mp3');
 bgMusic.loop = true;
 bgMusic.volume = 0.4;   // 0.0 to 1.0
 
+// Victory music
+const winMusic = new Audio('win_music.mp3');
+winMusic.loop = true;
+winMusic.volume = 0.5;
+
+function triggerWin() {
+    currentState = STATES.WIN;
+    bgMusic.pause();            // stop the action music
+    winMusic.currentTime = 0;
+    winMusic.play().catch(err => console.warn('Win music blocked:', err));
+}
+
 // Press M to mute / unmute
 window.addEventListener('keydown', e => {
-    if (e.key.toLowerCase() === 'm') bgMusic.muted = !bgMusic.muted;
+    if (e.key.toLowerCase() === 'm') {
+        bgMusic.muted = !bgMusic.muted;
+        winMusic.muted = bgMusic.muted;
+    }
 });
 
 // Game States
@@ -154,6 +169,8 @@ function resetToMenu() {
     document.getElementById('route-info').innerText = `Choose A Route`;
     walker.x = CA_START.x; walker.y = CA_START.y;
     bgMusic.pause();
+    winMusic.pause();
+    winMusic.currentTime = 0;
 }
 
 function startRoute(routeIdx) {
@@ -837,6 +854,10 @@ function updateStage3(dt) {
 
     if (isInGoal(walker.x, walker.y)) {
         currentState = STATES.WIN;
+    }
+
+        if (isInGoal(walker.x, walker.y)) {
+        triggerWin();
     }
 }
 
